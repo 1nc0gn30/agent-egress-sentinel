@@ -6,6 +6,7 @@ Zero external dependencies (pure Python standard library).
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import sqlite3
@@ -14,7 +15,7 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 
 @dataclass
@@ -64,12 +65,16 @@ class EgressCollector:
 
         self._init_db()
 
-    def _get_connection(self) -> sqlite3.Connection:
+    @contextlib.contextmanager
+    def _get_connection(self) -> Iterator[sqlite3.Connection]:
         conn = sqlite3.connect(self.db_path, timeout=10.0, check_same_thread=False)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL;")
         conn.execute("PRAGMA synchronous=NORMAL;")
-        return conn
+        try:
+            yield conn
+        finally:
+            conn.close()
 
     def _init_db(self) -> None:
         with self._lock:

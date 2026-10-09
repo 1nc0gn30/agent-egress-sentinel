@@ -463,6 +463,27 @@ class EgressProxy:
             ))
             return
 
+        # Read request body if Content-Length specified
+        content_len = 0
+        try:
+            content_len = int(headers.get("content-length", "0"))
+        except (ValueError, TypeError):
+            content_len = 0
+
+        req_body = initial_payload if isinstance(initial_payload, bytes) else b""
+        if b"\r\n\r\n" in req_body:
+            _, _, req_body = req_body.partition(b"\r\n\r\n")
+
+        while len(req_body) < content_len:
+            to_read = min(4096, content_len - len(req_body))
+            try:
+                chunk = client_sock.recv(to_read)
+                if not chunk:
+                    break
+                req_body += chunk
+            except Exception:
+                break
+
         try:
             remote_sock = socket.create_connection((target_host, target_port), timeout=10.0)
             remote_ip = remote_sock.getpeername()[0]
@@ -481,13 +502,15 @@ class EgressProxy:
                 origin_request += f"{k.title()}: {v}\r\n"
         origin_request += "Connection: close\r\n\r\n"
 
-        bytes_sent = len(origin_request.encode("utf-8"))
+        bytes_sent = len(origin_request.encode("utf-8")) + len(req_body)
         bytes_recv = 0
         response_preview = ""
         status_code = 200
 
         try:
             remote_sock.sendall(origin_request.encode("utf-8"))
+            if req_body:
+                remote_sock.sendall(req_body)
 
             resp_data = b""
             while self._running:
