@@ -119,6 +119,21 @@ class TestCollector(unittest.TestCase):
         self.assertEqual(len(har["log"]["entries"]), 1)
         self.assertIn("api.groq.com", har["log"]["entries"][0]["request"]["url"])
 
+    def test_export_openapi(self):
+        self.collector.record(NetworkEvent(
+            domain="api.anthropic.com",
+            method="POST",
+            url_path="/v1/messages",
+            request_sample='{"model": "claude-3-opus", "max_tokens": 1000}',
+            response_sample='{"id": "msg_123", "content": [{"text": "Hello"}]}',
+            category="llm_api",
+        ))
+        spec = self.collector.export_openapi()
+        self.assertEqual(spec["openapi"], "3.0.3")
+        self.assertIn("/v1/messages", spec["paths"])
+        self.assertIn("post", spec["paths"]["/v1/messages"])
+        self.assertIn("requestBody", spec["paths"]["/v1/messages"]["post"])
+
     def test_clear_logs(self):
         self.collector.record(NetworkEvent(domain="huggingface.co"))
         self.assertEqual(len(self.collector.get_events()), 1)

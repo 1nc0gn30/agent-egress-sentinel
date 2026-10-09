@@ -156,6 +156,16 @@ def cmd_export(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_openapi(args: argparse.Namespace) -> int:
+    collector = get_default_collector()
+    spec = collector.export_openapi()
+    out_file = args.output or "openapi-spec.json"
+    with open(out_file, "w", encoding="utf-8") as f:
+        json.dump(spec, f, indent=2)
+    print(f"[Sentinel] Synthesized OpenAPI 3.0 specification with {len(spec.get('paths', {}))} endpoints exported to {out_file}")
+    return 0
+
+
 def cmd_clear(args: argparse.Namespace) -> int:
     collector = get_default_collector()
     collector.clear()
@@ -204,6 +214,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_export = subparsers.add_parser("export", help="Export traffic log to HAR 1.2 file")
     p_export.add_argument("-o", "--output", default="agent-traffic.har", help="Output HAR file path")
 
+    # openapi command
+    p_openapi = subparsers.add_parser("openapi", help="Synthesize OpenAPI 3.0 specification from captured traffic")
+    p_openapi.add_argument("-o", "--output", default="openapi-spec.json", help="Output OpenAPI JSON file path")
+
     # clear command
     subparsers.add_parser("clear", help="Clear captured traffic database")
 
@@ -218,6 +232,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         return cmd_stats(args)
     elif args.command == "export":
         return cmd_export(args)
+    elif args.command == "openapi":
+        return cmd_openapi(args)
     elif args.command == "clear":
         return cmd_clear(args)
     return 0

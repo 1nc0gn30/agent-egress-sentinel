@@ -48,8 +48,9 @@ class NetworkEvent:
 class EgressCollector:
     """Thread-safe collector and database for agent network observations."""
 
-    def __init__(self, db_path: Optional[str] = None, max_ring_size: int = 2000):
+    def __init__(self, db_path: Optional[str] = None, max_ring_size: int = 2000, neuro_sync_enabled: bool = True):
         self.max_ring_size = max_ring_size
+        self.neuro_sync_enabled = neuro_sync_enabled
         self._events: List[NetworkEvent] = []
         self._lock = threading.RLock()
 
@@ -146,6 +147,7 @@ class EgressCollector:
             except Exception:
                 pass
 
+        self.sync_to_neuro_memory(event)
         return event
 
     def get_events(
@@ -278,6 +280,114 @@ class EgressCollector:
                 "entries": entries,
             }
         }
+
+    def export_openapi(self) -> Dict[str, Any]:
+        """Synthesize an OpenAPI 3.0 specification from captured agent traffic."""
+        events = self.get_events(limit=500)
+        paths: Dict[str, Any] = {}
+        servers_set = set()
+
+        def _infer_schema(val: Any) -> Dict[str, Any]:
+            if isinstance(val, dict):
+                return {"type": "object", "properties": {k: _infer_schema(v) for k, v in val.items()}}
+            elif isinstance(val, list):
+                return {"type": "array", "items": _infer_schema(val[0]) if val else {"type": "string"}}
+            elif isinstance(val, bool):
+                return {"type": "boolean"}
+            elif isinstance(val, int):
+                return {"type": "integer"}
+            elif isinstance(val, float):
+                return {"type": "number"}
+            return {"type": "string"}
+
+        for e in events:
+            domain = e["domain"]
+            proto = e.get("protocol", "HTTPS").lower()
+            if domain and domain != "unknown":
+                servers_set.add(f"{proto}://{domain}")
+
+            url_path = e.get("url_path", "/")
+            if url_path.startswith("tunnel://"):
+                url_path = "/tunnel"
+
+            clean_path = url_path.split("?")[0]
+            if not clean_path.startswith("/"):
+                clean_path = "/" + clean_path
+
+            method = e.get("method", "GET").lower()
+            if clean_path not in paths:
+                paths[clean_path] = {}
+
+            req_body_obj = None
+            if e.get("request_sample"):
+                try:
+                    parsed_req = json.loads(e["request_sample"])
+                    req_body_obj = {
+                        "description": "Captured request body payload",
+                        "content": {"application/json": {"schema": _infer_schema(parsed_req)}},
+                    }
+                except Exception:
+                    pass
+
+            resp_schema = {"type": "string"}
+            if e.get("response_sample"):
+                try:
+                    parsed_resp = json.loads(e["response_sample"])
+                    resp_schema = _infer_schema(parsed_resp)
+                except Exception:
+                    pass
+
+            paths[clean_path][method] = {
+                "summary": f"Observed {e['method']} on {domain}",
+                "tags": [e.get("category", "general"), domain],
+                "responses": {
+                    str(e.get("status_code", 200)): {
+                        "description": f"Captured HTTP {e.get('status_code', 200)} response",
+                        "content": {e.get("content_type", "application/json"): {"schema": resp_schema}},
+                    }
+                },
+            }
+            if req_body_obj:
+                paths[clean_path][method]["requestBody"] = req_body_obj
+
+        return {
+            "openapi": "3.0.3",
+            "info": {
+                "title": "Agent Egress Sentinel — Synthesized API Blueprint",
+                "version": "1.0.0",
+                "description": "Reverse-engineered OpenAPI specification synthesized directly from AI agent network traffic.",
+                "contact": {"name": "Neal Frazier Tech", "url": "https://nealfrazier.tech"},
+            },
+            "servers": [{"url": s} for s in sorted(list(servers_set))] or [{"url": "https://api.openai.com"}],
+            "paths": paths,
+        }
+
+    def sync_to_neuro_memory(self, event: NetworkEvent) -> None:
+        """Forward captured egress as an episodic memory to Neuro-Memory Daemon."""
+        if not self.neuro_sync_enabled:
+            return
+
+        def _post():
+            try:
+                import urllib.request
+                payload = json.dumps({
+                    "text": f"Agent '{event.agent_name}' egress to {event.domain} ({event.category}): {event.method} {event.url_path} [{event.status_code}], {event.bytes_sent}B sent, {event.bytes_recv}B recv, {round(event.latency_ms, 1)}ms latency.",
+                    "source": "agent-egress-sentinel",
+                    "category": "network_egress",
+                    "importance": 0.8 if event.quarantined else 0.5,
+                    "tags": ["egress", event.category, event.domain, "quarantined" if event.quarantined else "permitted"],
+                }).encode("utf-8")
+                req = urllib.request.Request(
+                    "http://127.0.0.1:8094/api/memories",
+                    data=payload,
+                    headers={"Content-Type": "application/json"},
+                )
+                urllib.request.urlopen(req, timeout=1.0)
+            except Exception:
+                pass
+
+        t = threading.Thread(target=_post, daemon=True)
+        t.start()
 
     def clear(self) -> None:
         """Clear all logged events."""

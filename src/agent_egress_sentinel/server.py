@@ -110,6 +110,18 @@ class EgressRequestHandler(SimpleHTTPRequestHandler):
             self.wfile.write(payload)
             return
 
+        if path in ("/api/export/openapi", "/api/openapi"):
+            spec = self.server.collector.export_openapi()
+            payload = json.dumps(spec, indent=2).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Disposition", 'attachment; filename="openapi-spec.json"')
+            self.send_header("Content-Length", str(len(payload)))
+            self._send_cors_headers()
+            self.end_headers()
+            self.wfile.write(payload)
+            return
+
         # Static Assets from public/ directory
         self._serve_static(path)
 

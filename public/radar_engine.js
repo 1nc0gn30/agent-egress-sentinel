@@ -726,6 +726,14 @@
     window.location.href = '/api/export';
   };
 
+  window.handleExportOpenAPI = function () {
+    if (!state.isPro) {
+      window.openPaywallModal();
+      return;
+    }
+    window.location.href = '/api/export/openapi';
+  };
+
   window.runAgentSimulation = function () {
     const sampleTargets = [
       { domain: 'api.openai.com', category: 'llm_api', path: '/v1/chat/completions', method: 'POST', sent: 3400, recv: 12400 },
