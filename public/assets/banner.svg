@@ -1,0 +1,621 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <foreignObject width="1200" height="630">
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  width: 1200px;
+  height: 630px;
+  background-color: #08080B;
+  background-image: 
+    radial-gradient(circle at 10% 15%, rgba(212, 175, 55, 0.16) 0%, transparent 42%),
+    radial-gradient(circle at 80% 50%, rgba(56, 189, 248, 0.18) 0%, rgba(168, 85, 247, 0.09) 35%, transparent 68%),
+    radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 24px 24px;
+  color: #F8FAFC;
+  font-family: 'Space Grotesk', sans-serif;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Outer Border & Subtle Frame */
+.frame-border {
+  position: absolute;
+  inset: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.85);
+  pointer-events: none;
+}
+
+.corner-accent {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #D4AF37;
+}
+.corner-tl { top: 14px; left: 14px; border-right: none; border-bottom: none; }
+.corner-tr { top: 14px; right: 14px; border-left: none; border-bottom: none; }
+.corner-bl { bottom: 14px; left: 14px; border-right: none; border-top: none; }
+.corner-br { bottom: 14px; right: 14px; border-left: none; border-top: none; }
+
+/* Main Container */
+.container {
+  width: 1120px;
+  height: 554px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+/* Left Column: Hero Content */
+.left-col {
+  width: 590px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+
+/* Top Meta Row */
+.top-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 9999px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #D4AF37;
+  text-transform: uppercase;
+}
+
+.brand-badge svg {
+  width: 14px;
+  height: 14px;
+  fill: #D4AF37;
+}
+
+.version-badge {
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94A3B8;
+}
+
+.live-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #10B981;
+}
+
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 8px #10B981;
+}
+
+/* Headings */
+.title-group {
+  margin-top: 8px;
+}
+
+.hero-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 45px;
+  line-height: 1.08;
+  letter-spacing: -0.8px;
+  background: linear-gradient(180deg, #FFFFFF 15%, #E2E8F0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-title-accent {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 38px;
+  line-height: 1.1;
+  background: linear-gradient(90deg, #D4AF37 0%, #F59E0B 45%, #38BDF8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: block;
+  margin-top: 2px;
+}
+
+.hero-subtitle {
+  font-size: 15.5px;
+  line-height: 1.45;
+  color: #94A3B8;
+  margin-top: 10px;
+  font-weight: 500;
+}
+
+/* Bento Feature Grid */
+.bento-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.bento-card {
+  background: rgba(18, 18, 26, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.bento-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.5), transparent);
+}
+
+.bento-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #F1F5F9;
+}
+
+.bento-icon-svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.bento-desc {
+  font-size: 11px;
+  color: #64748B;
+  line-height: 1.35;
+}
+
+/* Footer / Attribution */
+.footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.footer-attribution {
+  font-size: 11.5px;
+  color: #64748B;
+  font-weight: 500;
+}
+
+.footer-attribution strong {
+  color: #D4AF37;
+  font-weight: 600;
+}
+
+.footer-domain {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: #38BDF8;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Right Column: Hexagonal Radar Graphic */
+.right-col {
+  width: 500px;
+  height: 540px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.radar-wrapper {
+  position: relative;
+  width: 490px;
+  height: 490px;
+}
+
+/* Node Tags floating over radar */
+.node-card {
+  position: absolute;
+  background: rgba(13, 14, 20, 0.9);
+  backdrop-filter: blur(12px);
+  border-radius: 8px;
+  padding: 6px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: 'JetBrains Mono', monospace;
+  z-index: 10;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+}
+
+.node-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.node-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.node-meta {
+  font-size: 9px;
+  color: #64748B;
+  letter-spacing: 0.2px;
+}
+
+/* Node 1: OpenAI (Top Right) */
+.node-openai {
+  top: 30px;
+  right: 10px;
+  border: 1px solid rgba(16, 185, 129, 0.5);
+}
+.node-openai .node-top { color: #10B981; }
+.node-openai .node-dot { background: #10B981; box-shadow: 0 0 8px #10B981; }
+
+/* Node 2: Anthropic (Left Center) */
+.node-anthropic {
+  top: 175px;
+  left: -15px;
+  border: 1px solid rgba(56, 189, 248, 0.5);
+}
+.node-anthropic .node-top { color: #38BDF8; }
+.node-anthropic .node-dot { background: #38BDF8; box-shadow: 0 0 8px #38BDF8; }
+
+/* Node 3: Quarantined Segment (Bottom Right) */
+.node-quarantine {
+  bottom: 90px;
+  right: 10px;
+  border: 1px solid rgba(239, 68, 68, 0.7);
+  background: rgba(32, 10, 15, 0.92);
+}
+.node-quarantine .node-top { color: #EF4444; }
+.node-quarantine .node-dot { background: #EF4444; box-shadow: 0 0 10px #EF4444; }
+
+/* Bottom HUD Readout */
+.radar-hud {
+  position: absolute;
+  bottom: 0px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 94%;
+  background: rgba(18, 18, 26, 0.92);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 9px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  z-index: 12;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+}
+
+.hud-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.hud-label { color: #64748B; font-size: 8.5px; font-weight: 500; }
+.hud-val { color: #D4AF37; font-weight: 700; font-size: 11.5px; }
+.hud-val.alert { color: #EF4444; }
+.hud-val.live { color: #10B981; }
+
+</style>
+</head>
+<body>
+
+<div class="frame-border"></div>
+<div class="corner-accent corner-tl"></div>
+<div class="corner-accent corner-tr"></div>
+<div class="corner-accent corner-bl"></div>
+<div class="corner-accent corner-br"></div>
+
+<div class="container">
+  
+  <!-- Left Column -->
+  <div class="left-col">
+    <div>
+      <div class="top-meta">
+        <div class="brand-badge">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 2.18l7 3.12v4.7c0 4.67-3.13 9.03-7 10.15-3.87-1.12-7-5.48-7-10.15V6.3l7-3.12z"/>
+          </svg>
+          AGENT EGRESS SENTINEL
+        </div>
+        <div class="version-badge">v0.1.0</div>
+        <div class="live-status">
+          <span class="live-dot"></span>
+          REAL-TIME TELEMETRY
+        </div>
+      </div>
+
+      <div class="title-group">
+        <h1 class="hero-title">AUDIT EVERY AGENT PACKET.</h1>
+        <span class="hero-title-accent">AI NETWORK SNIFFER & RADAR</span>
+        <p class="hero-subtitle">
+          Real-time kernel socket sniffer, SNI classifier, and telemetry quarantine for autonomous AI agents. Inspect outbound TLS handshakes, stop rogue API egress, and eliminate exfiltration.
+        </p>
+      </div>
+
+      <div class="bento-grid">
+        <div class="bento-card">
+          <div class="bento-header">
+            <svg class="bento-icon-svg" viewBox="0 0 24 24" fill="#D4AF37">
+              <path d="M13 2L3 14h8v8l10-12h-8z"/>
+            </svg>
+            ZERO-DEPENDENCY
+          </div>
+          <div class="bento-desc">Standard Linux procfs socket audit. 0.0ms overhead.</div>
+        </div>
+
+        <div class="bento-card">
+          <div class="bento-header">
+            <svg class="bento-icon-svg" viewBox="0 0 24 24" fill="#38BDF8">
+              <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+            </svg>
+            SNI CLASSIFIER
+          </div>
+          <div class="bento-desc">Identifies OpenAI, Anthropic, Gemini & custom endpoints.</div>
+        </div>
+
+        <div class="bento-card">
+          <div class="bento-header">
+            <svg class="bento-icon-svg" viewBox="0 0 24 24" fill="#EF4444">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h2v-2h-2v2zm0-4h2V7h-2v6z"/>
+            </svg>
+            EGRESS QUARANTINE
+          </div>
+          <div class="bento-desc">Auto-blocks Segment, PostHog & stealth tracking pings.</div>
+        </div>
+
+        <div class="bento-card">
+          <div class="bento-header">
+            <svg class="bento-icon-svg" viewBox="0 0 24 24" fill="#A855F7">
+              <polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5" fill="none" stroke="#A855F7" stroke-width="2"/>
+              <circle cx="12" cy="12" r="3" fill="#A855F7"/>
+            </svg>
+            HEXAGONAL RADAR
+          </div>
+          <div class="bento-desc">Real-time vector topology with live latency mapping.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Attribution -->
+    <div class="footer-row">
+      <div class="footer-attribution">
+        Engineered by <strong>Neal Frazier Tech (@1nc0gn30)</strong> • NullAI Platform
+      </div>
+      <div class="footer-domain">agent-egress.nullai.tech</div>
+    </div>
+  </div>
+
+  <!-- Right Column: Hexagonal Radar Graphic -->
+  <div class="right-col">
+    <div class="radar-wrapper">
+      
+      <!-- SVG Radar Core -->
+      <svg width="490" height="490" viewBox="0 0 490 490" style="position: absolute; inset: 0;">
+        <defs>
+          <linearGradient id="goldBeam" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#D4AF37"/>
+            <stop offset="35%" stop-color="#F59E0B"/>
+            <stop offset="70%" stop-color="#38BDF8"/>
+            <stop offset="100%" stop-color="#A855F7"/>
+          </linearGradient>
+
+          <linearGradient id="sweepGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.4"/>
+            <stop offset="65%" stop-color="#38BDF8" stop-opacity="0.08"/>
+            <stop offset="100%" stop-color="#38BDF8" stop-opacity="0.0"/>
+          </linearGradient>
+
+          <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#D4AF37" stop-opacity="0.7"/>
+            <stop offset="35%" stop-color="#D4AF37" stop-opacity="0.2"/>
+            <stop offset="100%" stop-color="#D4AF37" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+
+        <!-- Center at (245, 225) to allow HUD at bottom -->
+        <!-- Outer Hexagon Perimeter (Radius 205) -->
+        <polygon points="
+          245,20 
+          422,122.5 
+          422,327.5 
+          245,430 
+          68,327.5 
+          68,122.5" 
+          fill="rgba(12, 13, 19, 0.78)" 
+          stroke="url(#goldBeam)" 
+          stroke-width="2.5" 
+          stroke-dasharray="14 6" />
+
+        <!-- Outer Hexagon Accent Inner Line -->
+        <polygon points="
+          245,30 
+          413,127.5 
+          413,322.5 
+          245,420 
+          77,322.5 
+          77,127.5" 
+          fill="none" 
+          stroke="rgba(212, 175, 55, 0.22)" 
+          stroke-width="1" />
+
+        <!-- Degree Coordinate Labels -->
+        <text x="245" y="15" fill="#D4AF37" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="700" text-anchor="middle">000° [NORTH RADAR SCAN]</text>
+        <text x="435" y="126" fill="#64748B" font-family="'JetBrains Mono', monospace" font-size="8.5" text-anchor="start">060°</text>
+        <text x="435" y="325" fill="#64748B" font-family="'JetBrains Mono', monospace" font-size="8.5" text-anchor="start">120°</text>
+        <text x="55" y="325" fill="#64748B" font-family="'JetBrains Mono', monospace" font-size="8.5" text-anchor="end">240°</text>
+        <text x="55" y="126" fill="#64748B" font-family="'JetBrains Mono', monospace" font-size="8.5" text-anchor="end">300°</text>
+
+        <!-- Concentric Circular Radar Grid Rings -->
+        <circle cx="245" cy="225" r="170" fill="none" stroke="rgba(212, 175, 55, 0.16)" stroke-width="1" stroke-dasharray="4 4" />
+        <circle cx="245" cy="225" r="120" fill="none" stroke="rgba(56, 189, 248, 0.2)" stroke-width="1" />
+        <circle cx="245" cy="225" r="75" fill="none" stroke="rgba(212, 175, 55, 0.28)" stroke-width="1" stroke-dasharray="6 4" />
+        <circle cx="245" cy="225" r="30" fill="none" stroke="rgba(56, 189, 248, 0.4)" stroke-width="1" />
+
+        <!-- Range Labels -->
+        <text x="250" y="152" fill="rgba(212, 175, 55, 0.6)" font-family="'JetBrains Mono', monospace" font-size="8">50ms</text>
+        <text x="250" y="107" fill="rgba(56, 189, 248, 0.6)" font-family="'JetBrains Mono', monospace" font-size="8">100ms</text>
+        <text x="250" y="57" fill="rgba(212, 175, 55, 0.6)" font-family="'JetBrains Mono', monospace" font-size="8">150ms</text>
+
+        <!-- Reticle Axes -->
+        <line x1="245" y1="30" x2="245" y2="420" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1" />
+        <line x1="77" y1="225" x2="413" y2="225" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1" />
+        <line x1="125" y1="105" x2="365" y2="345" stroke="rgba(255, 255, 255, 0.06)" stroke-width="1" />
+        <line x1="125" y1="345" x2="365" y2="105" stroke="rgba(255, 255, 255, 0.06)" stroke-width="1" />
+
+        <!-- Sweeping Radar Cone (45 deg angle) -->
+        <path d="M 245 225 L 390 110 A 185 185 0 0 0 245 40 Z" fill="url(#sweepGrad)" />
+        <line x1="245" y1="225" x2="390" y2="110" stroke="#38BDF8" stroke-width="2.2" />
+
+        <!-- Center Glow Aura -->
+        <circle cx="245" cy="225" r="48" fill="url(#centerGlow)" />
+
+        <!-- Trajectory Vector Lines to Active Nodes -->
+        <!-- To OpenAI -->
+        <line x1="245" y1="225" x2="365" y2="80" stroke="rgba(16, 185, 129, 0.5)" stroke-width="1.5" stroke-dasharray="3 3" />
+        <circle cx="365" cy="80" r="4.5" fill="#10B981" />
+        <circle cx="365" cy="80" r="10" fill="none" stroke="#10B981" stroke-width="1" opacity="0.6" />
+
+        <!-- To Anthropic -->
+        <line x1="245" y1="225" x2="115" y2="195" stroke="rgba(56, 189, 248, 0.5)" stroke-width="1.5" stroke-dasharray="3 3" />
+        <circle cx="115" cy="195" r="4.5" fill="#38BDF8" />
+        <circle cx="115" cy="195" r="9" fill="none" stroke="#38BDF8" stroke-width="1" opacity="0.6" />
+
+        <!-- To Quarantined Segment -->
+        <line x1="245" y1="225" x2="375" y2="335" stroke="rgba(239, 68, 68, 0.6)" stroke-width="1.5" stroke-dasharray="2 2" />
+        <circle cx="375" cy="335" r="5.5" fill="#EF4444" />
+        <circle cx="375" cy="335" r="14" fill="none" stroke="#EF4444" stroke-width="1.5" opacity="0.8" />
+        <circle cx="375" cy="335" r="22" fill="none" stroke="#EF4444" stroke-width="1" opacity="0.4" stroke-dasharray="4 2" />
+
+        <!-- Center Sentinel Shield Icon -->
+        <g transform="translate(233, 211) scale(1.05)">
+          <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 2.18l7 3.12v4.7c0 4.67-3.13 9.03-7 10.15-3.87-1.12-7-5.48-7-10.15V6.3l7-3.12z" fill="#D4AF37" />
+        </g>
+      </svg>
+
+      <!-- Floating Node 1: OpenAI -->
+      <div class="node-card node-openai">
+        <div class="node-top">
+          <span class="node-dot"></span>
+          api.openai.com:443
+        </div>
+        <div class="node-meta">TLS 1.3 • 200 OK • 42ms • ALLOWED</div>
+      </div>
+
+      <!-- Floating Node 2: Anthropic -->
+      <div class="node-card node-anthropic">
+        <div class="node-top">
+          <span class="node-dot"></span>
+          api.anthropic.com:443
+        </div>
+        <div class="node-meta">STREAMING • 18ms • VERIFIED</div>
+      </div>
+
+      <!-- Floating Node 3: Quarantined Segment -->
+      <div class="node-card node-quarantine">
+        <div class="node-top">
+          <span class="node-dot"></span>
+          telemetry.segment.io
+        </div>
+        <div class="node-meta" style="color: #F87171;">QUARANTINED • EXFILTRATION BLOCKED</div>
+      </div>
+
+      <!-- Radar HUD -->
+      <div class="radar-hud">
+        <div class="hud-item">
+          <span class="hud-label">PACKETS SNIFFED</span>
+          <span class="hud-val">14,892</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">LATENCY OVERHEAD</span>
+          <span class="hud-val live">0.02 ms</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">QUARANTINED</span>
+          <span class="hud-val alert">3 BLOCKED</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">SOCKETS</span>
+          <span class="hud-val">8 AUDITED</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
+
+  </foreignObject>
+</svg>
