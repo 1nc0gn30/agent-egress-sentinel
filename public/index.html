@@ -591,7 +591,7 @@
 <body>
 
   <!-- High-Converting Sales Funnel Banner -->
-  <aside id="salesBanner" aria-label="Founding Auditor Promotion" class="sales-banner">
+  <aside id="salesBanner" aria-label="Founding Auditor Promotion" class="sales-banner" data-alias="founding-offer-banner">
     <div class="sales-content">
       <div class="sales-left">
         <span class="pulse-dot" style="background: var(--gold-primary); box-shadow: 0 0 8px var(--gold-primary);"></span>
@@ -608,7 +608,7 @@
         <a href="https://depay.com/pay?integration=428790dd-7ad1-407c-8ecf-c048c77a4cb8&receiver=GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK&amount=19" target="_blank" rel="noopener noreferrer" class="btn-purple" style="text-decoration: none; display: inline-flex; align-items: center;" onclick="window.payWithSolana(event)">
           🟣 Solana Pay
         </a>
-        <button id="btnActivateBanner" onclick="window.openProModal()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; text-decoration: underline; font-size: 11px;">
+        <button id="btn-paywall-key" data-alias="btnActivateBanner" onclick="window.openProModal()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; text-decoration: underline; font-size: 11px;">
           Activate Key
         </button>
       </div>
@@ -805,7 +805,7 @@
     <div id="proPaywallSection" class="conic-card" style="position: relative; margin-top: 24px; margin-bottom: 40px; padding: 24px; overflow: hidden; border: 1px solid rgba(212, 175, 55, 0.25);">
       
       <!-- Blurred content (Pro feature locked in Free tier) -->
-      <div id="proPaywallContent" class="pro-paywall-blur" style="filter: blur(6px); pointer-events: none; user-select: none; transition: filter 0.3s ease;">
+      <div id="proPaywallContent" class="pro-paywall-blur paywall-blur" style="filter: blur(6px); user-select: none; transition: filter 0.3s ease;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
           <div>
             <h3 style="font-family: var(--font-display); font-size: 16px; font-weight: 800; color: var(--gold-primary);">
@@ -880,7 +880,7 @@
   </main>
 
   <!-- Pro Paywall Modal -->
-  <div id="proModal" data-alias="licenseModal" class="modal-overlay hidden">
+  <div id="licenseModal" data-alias="paywall-modal proModal" class="modal-overlay hidden">
     <div class="modal-content">
       <button id="closeProModal" onclick="window.closeProModal()" class="modal-close" aria-label="Close modal">✕</button>
 
@@ -922,9 +922,9 @@
 
       <!-- Instant Key / Email Activation Box -->
       <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
-        <label for="licenseKeyInput" style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">Already purchased? Enter License Key or Receipt Email:</label>
+        <label for="license-input" style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">Already purchased? Enter License Key or Receipt Email:</label>
         <div style="display: flex; gap: 8px;">
-          <input type="text" id="licenseKeyInput" placeholder="e.g. EGRESS-PRO-2026 or email" class="input-field" style="flex: 1;">
+          <input type="text" id="license-input" data-alias="licenseKeyInput" placeholder="e.g. EGRESS-PRO-2026 or email" class="input-field" style="flex: 1;">
           <button id="btnActivateKey" data-alias="btnActivateKey" onclick="window.activateWithKey()" class="btn-gold" style="white-space: nowrap;">
             Activate Key
           </button>

@@ -156,12 +156,10 @@
       }
       paywallBlur.forEach(el => {
         el.style.filter = 'blur(6px)';
-        el.style.pointerEvents = 'none';
         el.style.userSelect = 'none';
       });
       if (proPaywallContent) {
         proPaywallContent.style.filter = 'blur(6px)';
-        proPaywallContent.style.pointerEvents = 'none';
         proPaywallContent.style.userSelect = 'none';
       }
       paywallOverlay.forEach(el => el.classList.remove('hidden'));
@@ -173,7 +171,7 @@
 
   window.activateWithKey = function (key) {
     if (!key) {
-      const input = document.getElementById('licenseKeyInput');
+      const input = document.getElementById('license-input') || document.getElementById('licenseKeyInput') || document.querySelector('[data-alias="licenseKeyInput"]');
       if (input && input.value.trim()) {
         key = input.value.trim();
       }
@@ -199,11 +197,11 @@
   window.activateLicense = window.activateWithKey;
 
   window.openProModal = function () {
-    const modal = document.getElementById('proModal') || document.querySelector('[data-alias="licenseModal"]');
+    const modal = document.getElementById('licenseModal') || document.getElementById('proModal') || document.querySelector('[data-alias="licenseModal"]') || document.querySelector('[data-alias="paywall-modal"]');
     if (modal) modal.classList.remove('hidden');
   };
   window.closeProModal = function () {
-    const modal = document.getElementById('proModal') || document.querySelector('[data-alias="licenseModal"]');
+    const modal = document.getElementById('licenseModal') || document.getElementById('proModal') || document.querySelector('[data-alias="licenseModal"]') || document.querySelector('[data-alias="paywall-modal"]');
     if (modal) modal.classList.add('hidden');
   };
   window.openPaywallModal = window.openProModal;
