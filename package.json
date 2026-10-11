@@ -1,0 +1,13 @@
+{
+  "name": "agent-egress-sentinel",
+  "version": "2.5.0",
+  "description": "Zero-dependency network traffic sniffer, domain classifier, and egress radar for AI agents and LLM runtimes",
+  "main": "public/radar_engine.js",
+  "scripts": {
+    "serve": "npx serve public -l 8845",
+    "start": "python3 -m http.server 8095 --directory public",
+    "test": "pytest tests/"
+  },
+  "author": "Neal Frazier Tech (@1nc0gn30) • NullAI Platform",
+  "license": "MIT"
+}

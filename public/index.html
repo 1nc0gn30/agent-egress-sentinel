@@ -591,7 +591,7 @@
 <body>
 
   <!-- High-Converting Sales Funnel Banner -->
-  <aside aria-label="Founding Auditor Promotion" class="sales-banner">
+  <aside id="salesBanner" aria-label="Founding Auditor Promotion" class="sales-banner">
     <div class="sales-content">
       <div class="sales-left">
         <span class="pulse-dot" style="background: var(--gold-primary); box-shadow: 0 0 8px var(--gold-primary);"></span>
@@ -625,7 +625,7 @@
         <div>
           <div style="display: flex; align-items: center;">
             <span class="brand-title">AGENT EGRESS SENTINEL</span>
-            <span class="tag-badge">v0.1.0</span>
+            <span class="tag-badge">v2.5 SOVEREIGN</span>
           </div>
           <div style="font-size: 10px; color: var(--text-muted);">Autonomous AI Network Interceptor & Telemetry Radar</div>
         </div>
@@ -880,7 +880,7 @@
   </main>
 
   <!-- Pro Paywall Modal -->
-  <div id="proModal" class="modal-overlay hidden">
+  <div id="proModal" data-alias="licenseModal" class="modal-overlay hidden">
     <div class="modal-content">
       <button id="closeProModal" onclick="window.closeProModal()" class="modal-close" aria-label="Close modal">✕</button>
 
@@ -925,7 +925,7 @@
         <label for="licenseKeyInput" style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">Already purchased? Enter License Key or Receipt Email:</label>
         <div style="display: flex; gap: 8px;">
           <input type="text" id="licenseKeyInput" placeholder="e.g. EGRESS-PRO-2026 or email" class="input-field" style="flex: 1;">
-          <button id="btnActivateKey" onclick="window.activateWithKey()" class="btn-gold" style="white-space: nowrap;">
+          <button id="btnActivateKey" data-alias="btnActivateKey" onclick="window.activateWithKey()" class="btn-gold" style="white-space: nowrap;">
             Activate Key
           </button>
         </div>
