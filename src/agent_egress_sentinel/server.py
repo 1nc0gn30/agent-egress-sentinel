@@ -25,6 +25,26 @@ from .process_runner import AgentProcessRunner
 from .proxy import EgressProxy
 from .rules_engine import RulesEngine
 
+
+def _is_local_origin(origin) -> bool:
+    """Browser Origin check. No Origin header = non-browser client (CLI/agent): allowed.
+    Otherwise only http(s)://localhost / 127.0.0.1 / [::1] pages may call this API, so a
+    random website can't drive the local server from the user's browser (CSRF)."""
+    if not origin:
+        return True
+    from urllib.parse import urlparse
+    try:
+        u = urlparse(origin)
+    except ValueError:
+        return False
+    return u.scheme in ("http", "https") and u.hostname in ("localhost", "127.0.0.1", "::1")
+
+
+def _cors_origin(handler) -> str:
+    origin = handler.headers.get("Origin")
+    return origin if origin and _is_local_origin(origin) else "http://127.0.0.1"
+
+
 logger = logging.getLogger("agent_egress.server")
 
 
@@ -39,7 +59,7 @@ class EgressRequestHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def _send_cors_headers(self) -> None:
-        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Origin", _cors_origin(self))
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Agent-Name")
 
@@ -126,6 +146,14 @@ class EgressRequestHandler(SimpleHTTPRequestHandler):
         self._serve_static(path)
 
     def do_POST(self) -> None:
+        if not _is_local_origin(self.headers.get("Origin")):
+            _body = b'{"error": "cross-origin request blocked"}'
+            self.send_response(403)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(_body)))
+            self.end_headers()
+            self.wfile.write(_body)
+            return
         parsed_url = urlparse(self.path)
         path = parsed_url.path
 
