@@ -149,3 +149,10 @@ Verified using the sovereign automated headless Electron test suite (`site_guard
 - **Entity**: Neal Frazier Tech • [NullAI Platform](https://nullai.tech)
 - **Primary Hub**: [nealfrazier.tech](https://nealfrazier.tech)
 - **Repository**: [https://github.com/1nc0gn30/agent-egress-sentinel](https://github.com/1nc0gn30/agent-egress-sentinel)
+
+## Network exposure
+
+The server binds to `127.0.0.1` by default. To reach it from other devices,
+opt in explicitly with `--host 0.0.0.0` (or set `ZOTH_BIND_HOST=0.0.0.0`; an IP
+in `HOST` is also honoured, a plain hostname is ignored) and only on a trusted
+network.

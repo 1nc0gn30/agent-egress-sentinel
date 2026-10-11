@@ -288,7 +288,7 @@ class EgressServer(ThreadingHTTPServer):
 
 
 def run_server(
-    web_host: str = "0.0.0.0",
+    web_host: str = "127.0.0.1",
     web_port: int = 8095,
     proxy_host: str = "127.0.0.1",
     proxy_port: int = 8096,

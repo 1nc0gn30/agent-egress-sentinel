@@ -21,6 +21,24 @@ from .rules_engine import RulesEngine
 from .server import run_server
 
 
+def _default_bind_host() -> str:
+    """Bind address: localhost unless explicitly opted in via $ZOTH_BIND_HOST or
+    $HOST (IP literal only; zsh sets HOST to the hostname) or --host."""
+    import ipaddress, os
+    for var in ("ZOTH_BIND_HOST", "HOST"):
+        val = os.environ.get(var, "").strip()
+        if val == "localhost":
+            return "127.0.0.1"
+        if val:
+            try:
+                ipaddress.ip_address(val)
+                return val
+            except ValueError:
+                pass
+    return "127.0.0.1"
+
+
+
 def setup_logging(verbose: bool = False) -> None:
     level = logging.DEBUG if verbose else logging.INFO
     logging.basicConfig(
@@ -183,7 +201,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # serve command
     p_serve = subparsers.add_parser("serve", help="Start radar web dashboard and egress proxy daemon")
-    p_serve.add_argument("--web-host", default="0.0.0.0", help="Web UI host (default: 0.0.0.0)")
+    p_serve.add_argument("--web-host", default=_default_bind_host(), help="Host interface (default: 127.0.0.1 or $ZOTH_BIND_HOST; use 0.0.0.0 only on trusted networks)")
     p_serve.add_argument("--web-port", type=int, default=8095, help="Web UI port (default: 8095)")
     p_serve.add_argument("--proxy-host", default="127.0.0.1", help="Proxy listen host (default: 127.0.0.1)")
     p_serve.add_argument("--proxy-port", type=int, default=8096, help="Proxy listen port (default: 8096)")
