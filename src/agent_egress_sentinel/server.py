@@ -26,6 +26,17 @@ from .proxy import EgressProxy
 from .rules_engine import RulesEngine
 
 
+def _safe_rel(raw: str) -> str:
+    """Request path -> safe relative path inside a static dir; '' (index) if it
+    tries to climb out with '..' or is absolute. Raw request paths are not normalised."""
+    from urllib.parse import unquote
+    rel = unquote(str(raw or "")).replace("\\", "/").lstrip("/")
+    parts = [p for p in rel.split("/") if p not in ("", ".")]
+    if any(p == ".." for p in parts) or ":" in (parts[0] if parts else ""):
+        return ""
+    return "/".join(parts)
+
+
 def _is_local_origin(origin) -> bool:
     """Browser Origin check. No Origin header = non-browser client (CLI/agent): allowed.
     Otherwise only http(s)://localhost / 127.0.0.1 / [::1] pages may call this API, so a
@@ -234,8 +245,14 @@ class EgressRequestHandler(SimpleHTTPRequestHandler):
         if path in ("/", ""):
             req_file = public_dir / "index.html"
         else:
-            clean_rel = path.lstrip("/")
-            req_file = public_dir / clean_rel
+            clean_rel = _safe_rel(path)
+            req_file = (public_dir / clean_rel).resolve()
+            # Block ../ traversal out of public/ (raw request paths are not normalised).
+            try:
+                req_file.relative_to(public_dir.resolve())
+            except ValueError:
+                self._send_json({"error": "Forbidden"}, 403)
+                return
 
         if req_file.exists() and req_file.is_file():
             mime, _ = mimetypes.guess_type(str(req_file))
