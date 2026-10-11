@@ -46,6 +46,8 @@
   let statsReqs, statsDomains, statsData, statsLatency, statsQuarantine;
   let trafficTableBody, domainListEl, endpointModal, payloadModal;
 
+  const isLocalDaemon = (window.location.port === "8095" || window.location.port === "8096");
+
   // --- Initialize Application ---
   function init() {
     canvas = document.getElementById('radarCanvas');
@@ -63,17 +65,21 @@
     checkLicense();
     setupCanvas();
     setupEventListeners();
-    fetchStats();
-    fetchDomains();
-    fetchTraffic();
-    connectSSE();
+
+    if (isLocalDaemon) {
+      fetchStats();
+      fetchDomains();
+      fetchTraffic();
+      connectSSE();
+      setInterval(fetchStats, 3000);
+      setInterval(fetchDomains, 4000);
+    } else {
+      seedStaticEnvironment();
+      setInterval(simulatePeriodicActivity, 3500);
+    }
 
     // Start Kinetic Render Loop
     requestAnimationFrame(renderLoop);
-
-    // Periodic Refresh fallback
-    setInterval(fetchStats, 3000);
-    setInterval(fetchDomains, 4000);
   }
 
   // --- License & Monetization ---
@@ -88,48 +94,149 @@
   }
 
   function updateProUI() {
+    const licenseBadge = document.getElementById('licenseBadge');
     const proBadge = document.getElementById('proStatusBadge');
     const paywallBlur = document.querySelectorAll('.pro-paywall-blur');
     const paywallOverlay = document.querySelectorAll('.pro-paywall-overlay');
+    const paywallOverlaySingle = document.getElementById('paywallOverlay');
+    const proPaywallContent = document.getElementById('proPaywallContent');
 
     if (state.isPro) {
+      if (licenseBadge) {
+        licenseBadge.textContent = '⭐ PRO ACTIVE';
+        licenseBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+        licenseBadge.style.color = '#10B981';
+        licenseBadge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+      }
       if (proBadge) {
         proBadge.textContent = '⭐ PRO ACTIVE';
-        proBadge.className = 'px-3 py-1 text-xs font-bold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-lg shadow-amber-500/10';
       }
-      paywallBlur.forEach(el => el.classList.remove('filter', 'blur-sm', 'pointer-events-none', 'select-none'));
+      paywallBlur.forEach(el => {
+        el.style.filter = 'none';
+        el.style.pointerEvents = 'auto';
+        el.style.userSelect = 'auto';
+      });
+      if (proPaywallContent) {
+        proPaywallContent.style.filter = 'none';
+        proPaywallContent.style.pointerEvents = 'auto';
+        proPaywallContent.style.userSelect = 'auto';
+      }
       paywallOverlay.forEach(el => el.classList.add('hidden'));
+      if (paywallOverlaySingle) {
+        paywallOverlaySingle.style.display = 'none';
+      }
     } else {
+      if (licenseBadge) {
+        licenseBadge.textContent = '⚡ FREE TIER';
+        licenseBadge.style.background = 'rgba(255, 255, 255, 0.06)';
+        licenseBadge.style.color = 'var(--gold-primary)';
+        licenseBadge.style.borderColor = 'var(--border-subtle)';
+      }
       if (proBadge) {
         proBadge.textContent = 'COMMUNITY EDITION';
-        proBadge.className = 'px-3 py-1 text-xs font-semibold rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700';
       }
-      paywallBlur.forEach(el => el.classList.add('filter', 'blur-sm', 'pointer-events-none', 'select-none'));
+      paywallBlur.forEach(el => {
+        el.style.filter = 'blur(6px)';
+        el.style.pointerEvents = 'none';
+        el.style.userSelect = 'none';
+      });
+      if (proPaywallContent) {
+        proPaywallContent.style.filter = 'blur(6px)';
+        proPaywallContent.style.pointerEvents = 'none';
+        proPaywallContent.style.userSelect = 'none';
+      }
       paywallOverlay.forEach(el => el.classList.remove('hidden'));
+      if (paywallOverlaySingle) {
+        paywallOverlaySingle.style.display = 'flex';
+      }
     }
   }
 
-  window.activateLicenseKey = function (promptUser = true) {
-    if (promptUser) {
-      const key = prompt('Enter your Sentinel Pro License Key or Stripe Receipt Email:');
-      if (!key || !key.trim()) return;
+  window.activateWithKey = function (key) {
+    if (!key) {
+      const input = document.getElementById('licenseKeyInput');
+      if (input && input.value.trim()) {
+        key = input.value.trim();
+      }
     }
+    if (!key) {
+      key = prompt('Enter your Sentinel Pro License Key or Stripe Receipt Email:');
+    }
+    if (!key || !key.trim()) return;
+
     localStorage.setItem('sentinel_pro_licensed', 'true');
     state.isPro = true;
     updateProUI();
-    closePaywallModal();
+    window.closeProModal();
     showToast('⭐ Sentinel Pro successfully activated! Full export and deep telemetry unlocked.', 'success');
   };
+  window.activateLicenseKey = window.activateWithKey;
 
-  window.openPaywallModal = function () {
-    const modal = document.getElementById('paywallModal');
+  window.openProModal = function () {
+    const modal = document.getElementById('proModal') || document.getElementById('paywallModal');
     if (modal) modal.classList.remove('hidden');
   };
-
-  window.closePaywallModal = function () {
-    const modal = document.getElementById('paywallModal');
+  window.closeProModal = function () {
+    const modal = document.getElementById('proModal') || document.getElementById('paywallModal');
     if (modal) modal.classList.add('hidden');
   };
+  window.openPaywallModal = window.openProModal;
+  window.closePaywallModal = window.closeProModal;
+
+  function seedStaticEnvironment() {
+    state.stats = {
+      total_requests: 1420,
+      total_domains: 7,
+      total_bytes_sent: 148200,
+      total_bytes_recv: 894000,
+      avg_latency_ms: 68,
+      total_quarantined: 14,
+      quarantine_mode: 'block_telemetry',
+    };
+
+    if (statsReqs) statsReqs.textContent = (state.stats.total_requests).toLocaleString();
+    if (statsDomains) statsDomains.textContent = (state.stats.total_domains).toLocaleString();
+    if (statsData) statsData.textContent = formatBytes(state.stats.total_bytes_sent + state.stats.total_bytes_recv);
+    if (statsLatency) statsLatency.textContent = `${state.stats.avg_latency_ms}ms`;
+    if (statsQuarantine) statsQuarantine.textContent = (state.stats.total_quarantined).toLocaleString();
+
+    const sampleDomains = [
+      { domain: 'api.openai.com', category: 'llm_api', request_count: 610, total_bytes_sent: 34000, total_bytes_recv: 420000, quarantined_count: 0 },
+      { domain: 'api.anthropic.com', category: 'llm_api', request_count: 430, total_bytes_sent: 28000, total_bytes_recv: 310000, quarantined_count: 0 },
+      { domain: 'huggingface.co', category: 'model_hub', request_count: 85, total_bytes_sent: 12000, total_bytes_recv: 150000, quarantined_count: 0 },
+      { domain: 'api.segment.io', category: 'telemetry_tracker', request_count: 140, total_bytes_sent: 8400, total_bytes_recv: 0, quarantined_count: 14 },
+      { domain: 'telemetry.sentry.io', category: 'telemetry_tracker', request_count: 95, total_bytes_sent: 5600, total_bytes_recv: 0, quarantined_count: 0 },
+      { domain: 'api.tavily.com', category: 'search_scraper', request_count: 52, total_bytes_sent: 3100, total_bytes_recv: 14000, quarantined_count: 0 },
+      { domain: 'localhost', category: 'local_service', request_count: 8, total_bytes_sent: 1200, total_bytes_recv: 0, quarantined_count: 0 },
+    ];
+
+    sampleDomains.forEach(d => state.domains.set(d.domain, d));
+
+    const now = Date.now() / 1000;
+    state.events = [
+      { id: 'ev-1', timestamp: now - 2, agent_name: 'autonomous_planner', domain: 'api.openai.com', remote_ip: '104.18.24.1', remote_port: 443, protocol: 'HTTPS', method: 'POST', url_path: '/v1/chat/completions', status_code: 200, bytes_sent: 3420, bytes_recv: 14500, latency_ms: 64, category: 'llm_api', quarantined: false, request_sample: '{"model":"gpt-4o","messages":[{"role":"user","content":"Audit egress traffic"}]}', response_sample: '{"choices":[{"message":{"content":"Egress clean"}}]}' },
+      { id: 'ev-2', timestamp: now - 8, agent_name: 'data_collector', domain: 'api.segment.io', remote_ip: '52.84.12.9', remote_port: 443, protocol: 'HTTPS', method: 'POST', url_path: '/v1/t', status_code: 403, bytes_sent: 1200, bytes_recv: 0, latency_ms: 22, category: 'telemetry_tracker', quarantined: true, notes: 'Quarantined by policy block_telemetry' },
+      { id: 'ev-3', timestamp: now - 15, agent_name: 'coder_agent', domain: 'api.anthropic.com', remote_ip: '104.18.25.2', remote_port: 443, protocol: 'HTTPS', method: 'POST', url_path: '/v1/messages', status_code: 200, bytes_sent: 4100, bytes_recv: 18200, latency_ms: 82, category: 'llm_api', quarantined: false },
+      { id: 'ev-4', timestamp: now - 24, agent_name: 'researcher', domain: 'api.tavily.com', remote_ip: '34.111.45.8', remote_port: 443, protocol: 'HTTPS', method: 'POST', url_path: '/search', status_code: 200, bytes_sent: 940, bytes_recv: 8900, latency_ms: 110, category: 'search_scraper', quarantined: false },
+      { id: 'ev-5', timestamp: now - 35, agent_name: 'model_loader', domain: 'huggingface.co', remote_ip: '18.155.67.2', remote_port: 443, protocol: 'HTTPS', method: 'GET', url_path: '/api/models/meta-llama', status_code: 200, bytes_sent: 820, bytes_recv: 45000, latency_ms: 95, category: 'model_hub', quarantined: false },
+    ];
+
+    renderDomainList();
+    renderTrafficTable();
+
+    const ind = document.getElementById('sseIndicator');
+    if (ind) {
+      ind.classList.remove('bg-zinc-500');
+      ind.classList.add('bg-emerald-400');
+    }
+  }
+
+  function simulatePeriodicActivity() {
+    const domainKeys = Array.from(state.domains.keys());
+    if (domainKeys.length === 0) return;
+    const randomDomain = domainKeys[Math.floor(Math.random() * domainKeys.length)];
+    spawnPacketParticle(randomDomain);
+  }
 
   // --- Canvas Setup & DPI Scaling ---
   function setupCanvas() {
@@ -720,18 +827,98 @@
 
   window.handleExportHAR = function () {
     if (!state.isPro) {
-      window.openPaywallModal();
+      window.openProModal();
       return;
     }
-    window.location.href = '/api/export';
+    if (isLocalDaemon) {
+      window.location.href = '/api/export';
+      return;
+    }
+    // Client-side HAR 1.2 generation
+    const har = {
+      log: {
+        version: "1.2",
+        creator: { name: "Agent Egress Sentinel", version: "0.1.0" },
+        pages: [{ startedDateTime: new Date().toISOString(), id: "page_1", title: "AI Agent Egress Session", pageTimings: {} }],
+        entries: state.events.map(ev => ({
+          startedDateTime: new Date((ev.timestamp || Date.now() / 1000) * 1000).toISOString(),
+          time: Math.round(ev.latency_ms || 45),
+          request: {
+            method: ev.method || "POST",
+            url: `https://${ev.domain}${ev.url_path || "/v1"}`,
+            httpVersion: "HTTP/1.1",
+            headers: [{ name: "Host", value: ev.domain }, { name: "User-Agent", value: `SentinelAgent/${ev.agent_name || 'agent'}` }],
+            queryString: [],
+            headersSize: -1,
+            bodySize: ev.bytes_sent || 0
+          },
+          response: {
+            status: ev.status_code || 200,
+            statusText: ev.quarantined ? "Quarantined" : "OK",
+            httpVersion: "HTTP/1.1",
+            headers: [{ name: "Content-Type", value: "application/json" }],
+            content: { size: ev.bytes_recv || 0, mimeType: "application/json", text: ev.response_sample || "{}" },
+            headersSize: -1,
+            bodySize: ev.bytes_recv || 0
+          },
+          cache: {},
+          timings: { send: 5, wait: Math.round(ev.latency_ms || 45) - 10, receive: 5 }
+        }))
+      }
+    };
+    const blob = new Blob([JSON.stringify(har, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `agent-egress-audit-${Date.now()}.har`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("💾 Pro HAR 1.2 audit archive generated and downloaded.", "success");
   };
 
   window.handleExportOpenAPI = function () {
     if (!state.isPro) {
-      window.openPaywallModal();
+      window.openProModal();
       return;
     }
-    window.location.href = '/api/export/openapi';
+    if (isLocalDaemon) {
+      window.location.href = '/api/export/openapi';
+      return;
+    }
+    // Client-side OpenAPI 3.0 generation
+    const paths = {};
+    state.events.forEach(ev => {
+      const p = ev.url_path || "/api/v1/endpoint";
+      if (!paths[p]) paths[p] = {};
+      paths[p][(ev.method || "post").toLowerCase()] = {
+        summary: `Egress to ${ev.domain}`,
+        tags: [ev.category || "General"],
+        responses: {
+          [String(ev.status_code || 200)]: {
+            description: ev.quarantined ? "Blocked by Egress Sentinel" : "Success",
+            content: { "application/json": { schema: { type: "object" } } }
+          }
+        }
+      };
+    });
+    const openapi = {
+      openapi: "3.0.0",
+      info: { title: "Agent Discovered Egress API", version: "1.0.0", description: "Discovered live by Agent Egress Sentinel" },
+      servers: Array.from(state.domains.keys()).map(d => ({ url: `https://${d}` })),
+      paths
+    };
+    const blob = new Blob([JSON.stringify(openapi, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `agent-egress-openapi-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("📜 OpenAPI 3.0 specification exported successfully.", "success");
   };
 
   window.runAgentSimulation = function () {

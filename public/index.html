@@ -20,8 +20,13 @@
   <meta name="twitter:description" content="Zero-dependency network traffic sniffer and egress radar for AI agents and LLM runtimes.">
   <meta name="twitter:image" content="https://agent-egress.nullai.tech/assets/banner.png">
 
-  <!-- Favicon SVG -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23D4AF37'><path d='M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 2.18l7 3.12v4.7c0 4.67-3.13 9.03-7 10.15-3.87-1.12-7-5.48-7-10.15V6.3l7-3.12z'/></svg>">
+  <!-- Favicon Assets -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon.png">
+  <link rel="apple-touch-icon" href="/assets/icon.png">
+
+  <!-- DePay Solana Payment Widget SDK -->
+  <script src="https://integrate.depay.com/widgets/v13.js" defer></script>
 
   <!-- Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -600,10 +605,10 @@
         <a href="https://buy.stripe.com/7sI7sA8hM2X8eFG8ww" target="_blank" rel="noopener noreferrer" class="btn-gold">
           💳 Unlock via Stripe ($19)
         </a>
-        <a href="https://depay.com/pay?integration=428790dd-7ad1-407c-8ecf-c048c77a4cb8&receiver=GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK&amount=19" target="_blank" rel="noopener noreferrer" class="btn-purple" style="text-decoration: none; display: inline-flex; align-items: center;">
+        <a href="https://depay.com/pay?integration=428790dd-7ad1-407c-8ecf-c048c77a4cb8&receiver=GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK&amount=19" target="_blank" rel="noopener noreferrer" class="btn-purple" style="text-decoration: none; display: inline-flex; align-items: center;" onclick="window.payWithSolana(event)">
           🟣 Solana Pay
         </a>
-        <button onclick="window.activateLicenseKey()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; text-decoration: underline; font-size: 11px;">
+        <button id="btnActivateBanner" onclick="window.openProModal()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; text-decoration: underline; font-size: 11px;">
           Activate Key
         </button>
       </div>
@@ -615,9 +620,7 @@
     <div class="header-inner">
       <div class="brand">
         <div class="logo-badge" title="Agent Egress Sentinel">
-          <svg viewBox="0 0 24 24">
-            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 2.18l7 3.12v4.7c0 4.67-3.13 9.03-7 10.15-3.87-1.12-7-5.48-7-10.15V6.3l7-3.12z"/>
-          </svg>
+          <img src="/assets/icon.png" alt="Agent Egress Sentinel Icon" class="logo-img" style="width: 28px; height: 28px; border-radius: 6px;">
         </div>
         <div>
           <div style="display: flex; align-items: center;">
@@ -630,10 +633,11 @@
 
       <div class="header-actions">
         <span id="sseIndicator" class="pulse-dot" title="Live Radar Connected"></span>
-        <span id="proStatusBadge" onclick="window.openPaywallModal()" style="font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 9999px; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); cursor: pointer;">
-          COMMUNITY EDITION
+        <span id="licenseBadge" class="license-badge" onclick="window.openProModal()" style="font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 9999px; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); color: var(--gold-primary); cursor: pointer;">
+          ⚡ FREE TIER
         </span>
-        <button onclick="window.runAgentSimulation()" class="btn-secondary" style="border-color: rgba(212,175,55,0.4); color: var(--gold-primary);">
+        <span id="proStatusBadge" class="hidden"></span>
+        <button id="btnSimulateLive" onclick="window.runAgentSimulation()" class="btn-secondary" style="border-color: rgba(212,175,55,0.4); color: var(--gold-primary);">
           ⚡ Simulate
         </button>
       </div>
@@ -753,10 +757,10 @@
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
           <input id="tableSearchInput" type="text" placeholder="Search domain, agent, endpoint..." class="input-field" style="width: 220px;">
-          <button onclick="window.handleExportOpenAPI()" class="btn-secondary" style="padding: 6px 12px; font-weight: 700; color: var(--gold-primary); border-color: rgba(212,175,55,0.4);">
+          <button id="btnExportOpenApiLive" onclick="window.handleExportOpenAPI()" class="btn-secondary" style="padding: 6px 12px; font-weight: 700; color: var(--gold-primary); border-color: rgba(212,175,55,0.4);">
             📜 OpenAPI 3.0
           </button>
-          <button onclick="window.handleExportHAR()" class="btn-gold" style="padding: 6px 12px;">
+          <button id="btnExportHarLive" onclick="window.handleExportHAR()" class="btn-gold" style="padding: 6px 12px;">
             💾 Export HAR 1.2
           </button>
         </div>
@@ -797,18 +801,92 @@
       </div>
     </div>
 
+    <!-- Pro Feature Paywall Section: Kernel Egress Quarantine & Deep HAR Replay Vault -->
+    <div id="proPaywallSection" class="conic-card" style="position: relative; margin-top: 24px; margin-bottom: 40px; padding: 24px; overflow: hidden; border: 1px solid rgba(212, 175, 55, 0.25);">
+      
+      <!-- Blurred content (Pro feature locked in Free tier) -->
+      <div id="proPaywallContent" class="pro-paywall-blur" style="filter: blur(6px); pointer-events: none; user-select: none; transition: filter 0.3s ease;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div>
+            <h3 style="font-family: var(--font-display); font-size: 16px; font-weight: 800; color: var(--gold-primary);">
+              🛡️ KERNEL EGRESS QUARANTINE &amp; DEEP PACKET REPLAY VAULT
+            </h3>
+            <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+              Autonomous in-kernel TCP RST injection, full-payload hex disassembler, and continuous HAR 1.2 streaming.
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-secondary" style="font-size: 11px; border-color: rgba(239, 68, 68, 0.5); color: #EF4444;">
+              ⚡ RST Injector: ACTIVE
+            </button>
+            <button class="btn-gold" style="font-size: 11px;">
+              🔄 Automated Replay
+            </button>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px;">
+          <div style="background: rgba(0, 0, 0, 0.6); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px; font-family: var(--font-mono); font-size: 11px; color: #94A3B8; max-height: 180px; overflow: hidden;">
+            <div style="color: var(--gold-primary); font-weight: 700; margin-bottom: 6px;">LIVE KERNEL SOCKET STREAM [/proc/net/tcp]:</div>
+            <div style="color: #38BDF8;">00000000: 4500 003c 1a2b 4000 4006 e12a 7f00 0001  E..<+@.@..*....</div>
+            <div style="color: #10B981;">00000010: 7f00 0001 9c40 1f92 0000 0000 0000 0000  .....@..........</div>
+            <div style="color: #EF4444;">00000020: a002 7210 9f12 0000 0204 05b4 0402 080a  ..r.............</div>
+            <div style="color: #F59E0B;">00000030: 023f b412 0000 0000 0103 0307 [SNI: api.openai.com] QUARANTINE_ARMED</div>
+          </div>
+          <div style="background: rgba(0, 0, 0, 0.6); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px; font-size: 11px;">
+            <div style="color: var(--gold-primary); font-weight: 700; margin-bottom: 6px;">EXFILTRATION COUNTERMEASURES:</div>
+            <div style="color: var(--text-muted); line-height: 1.6;">
+              ✓ TCP Reset on unverified outbound TLS<br>
+              ✓ In-Memory TLS 1.3 ClientHello Decoder<br>
+              ✓ Telemetry Deflector (Segment / PostHog)<br>
+              ✓ Multi-Agent Session HAR 1.2 Export
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Glowing Centered Lock Overlay -->
+      <div id="paywallOverlay" class="pro-paywall-overlay" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 10; background: rgba(8, 8, 11, 0.85); backdrop-filter: blur(2px);">
+        <div style="background: rgba(16, 16, 24, 0.95); border: 1px solid var(--border-gold); box-shadow: 0 8px 32px rgba(212, 175, 55, 0.25); border-radius: 14px; max-width: 480px; width: 90%; padding: 24px; text-align: center;">
+          <div style="width: 42px; height: 42px; border-radius: 10px; background: rgba(212, 175, 55, 0.15); border: 1px solid var(--border-gold); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px auto; font-size: 20px;">
+            🛡️
+          </div>
+          <h4 style="font-family: var(--font-display); font-size: 15px; font-weight: 800; color: #FFF; margin-bottom: 6px;">
+            PRO FEATURE: KERNEL EGRESS QUARANTINE
+          </h4>
+          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px;">
+            Lock down outbound network exfiltration, stream continuous multi-agent HAR traces, and inject automated TCP resets on unauthorized telemetry.
+          </p>
+          <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 8px; margin-bottom: 14px; font-size: 12px;">
+            <span style="color: var(--text-dim); text-decoration: line-through;">$79 Regular</span>
+            <strong style="color: var(--gold-primary); font-size: 14px; margin-left: 8px;">$19 Lifetime Founding Access</strong>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <a href="https://buy.stripe.com/7sI7sA8hM2X8eFG8ww" target="_blank" rel="noopener noreferrer" class="btn-gold" style="justify-content: center; padding: 9px;">
+              💳 Instant Unlock via Stripe ($19)
+            </a>
+            <a href="https://depay.com/pay?integration=428790dd-7ad1-407c-8ecf-c048c77a4cb8&receiver=GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK&amount=19" target="_blank" rel="noopener noreferrer" class="btn-purple" style="justify-content: center; padding: 8px; text-decoration: none; display: flex; align-items: center;" onclick="window.payWithSolana(event)">
+              🟣 Pay with Solana (DePay)
+            </a>
+            <button id="btnKeyOverlay" onclick="window.openProModal()" style="background: none; border: none; color: var(--text-dim); font-size: 11px; text-decoration: underline; cursor: pointer; margin-top: 4px;">
+              Already purchased? Enter License Key or Receipt Email
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
   </main>
 
   <!-- Pro Paywall Modal -->
-  <div id="paywallModal" class="modal-overlay hidden">
+  <div id="proModal" class="modal-overlay hidden">
     <div class="modal-content">
-      <button onclick="window.closePaywallModal()" class="modal-close" aria-label="Close modal">✕</button>
+      <button id="closeProModal" onclick="window.closeProModal()" class="modal-close" aria-label="Close modal">✕</button>
 
       <div style="text-align: center; margin-bottom: 20px;">
         <div class="logo-badge" style="margin: 0 auto 10px auto; width: 44px; height: 44px;">
-          <svg viewBox="0 0 24 24" style="width: 26px; height: 26px;">
-            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 2.18l7 3.12v4.7c0 4.67-3.13 9.03-7 10.15-3.87-1.12-7-5.48-7-10.15V6.3l7-3.12z"/>
-          </svg>
+          <img src="/assets/icon.png" alt="Agent Egress Sentinel Icon" style="width: 32px; height: 32px; border-radius: 6px;">
         </div>
         <h3 style="font-family: var(--font-display); font-size: 18px; font-weight: 800; color: #FFF;">UNLOCK SENTINEL PRO</h3>
         <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
@@ -822,7 +900,7 @@
         <div><strong style="color: var(--gold-primary);">✓</strong> <strong>Automated Telemetry Blackhole:</strong> Auto-deflect Segment, Sentry, PostHog</div>
         <div><strong style="color: var(--gold-primary);">✓</strong> <strong>Full HAR 1.2 Multi-Agent Export:</strong> Compliance audit records</div>
         <div><strong style="color: var(--gold-primary);">✓</strong> <strong>Linux /proc Socket Auditor:</strong> Catch raw TCP socket attempts</div>
-        <div><strong style="color: var(--gold-primary);">✓</strong> <strong>Lifetime License & Updates:</strong> One-time fee, no subscriptions</div>
+        <div><strong style="color: var(--gold-primary);">✓</strong> <strong>Lifetime License &amp; Updates:</strong> One-time fee, no subscriptions</div>
       </div>
 
       <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; text-align: center; margin-bottom: 16px;">
@@ -837,15 +915,20 @@
         <a href="https://buy.stripe.com/7sI7sA8hM2X8eFG8ww" target="_blank" rel="noopener noreferrer" class="btn-gold" style="justify-content: center; padding: 10px;">
           💳 Instant Checkout via Stripe ($19)
         </a>
-        <a href="https://depay.com/pay?integration=428790dd-7ad1-407c-8ecf-c048c77a4cb8&receiver=GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK&amount=19" target="_blank" rel="noopener noreferrer" class="btn-purple" style="padding: 10px; text-decoration: none; text-align: center; display: block;">
+        <a href="https://depay.com/pay?integration=428790dd-7ad1-407c-8ecf-c048c77a4cb8&receiver=GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK&amount=19" target="_blank" rel="noopener noreferrer" class="btn-purple" style="padding: 10px; text-decoration: none; text-align: center; display: block;" onclick="window.payWithSolana(event)">
           🟣 Pay with Solana (DePay Widget)
         </a>
       </div>
 
-      <div style="text-align: center; margin-top: 14px;">
-        <button onclick="window.activateLicenseKey(true)" style="background: none; border: none; font-size: 11px; color: var(--text-dim); text-decoration: underline; cursor: pointer;">
-          Already purchased? Enter License Key or Receipt Email
-        </button>
+      <!-- Instant Key / Email Activation Box -->
+      <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
+        <label for="licenseKeyInput" style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">Already purchased? Enter License Key or Receipt Email:</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="licenseKeyInput" placeholder="e.g. EGRESS-PRO-2026 or email" class="input-field" style="flex: 1;">
+          <button id="btnActivateKey" onclick="window.activateWithKey()" class="btn-gold" style="white-space: nowrap;">
+            Activate Key
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -875,6 +958,25 @@
       </div>
     </div>
   </footer>
+
+  <script>
+    function payWithSolana(e) {
+      if (e) e.preventDefault();
+      if (window.DePay && window.DePay.Payment) {
+        try {
+          window.DePay.Payment({
+            accept: [
+              { blockchain: 'solana', token: '11111111111111111111111111111111', receiver: 'GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK', amount: 19 }
+            ]
+          });
+          return;
+        } catch (err) {
+          console.warn('DePay widget fallback:', err);
+        }
+      }
+      window.open('https://depay.com/pay?integration=428790dd-7ad1-407c-8ecf-c048c77a4cb8&receiver=GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK&amount=19', '_blank');
+    }
+  </script>
 
   <script src="/radar_engine.js"></script>
 </body>
