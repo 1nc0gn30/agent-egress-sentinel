@@ -1,3 +1,9 @@
+<div align="center">
+  <img src="assets/hero-banner.svg" alt="Agent Egress Sentinel — Sovereign Architecture Banner" width="100%" />
+</div>
+
+<br />
+
 # 🛡️ Agent Egress Sentinel
 
 > **Autonomous Zero-Dependency Network Interceptor, Domain Classifier, and Kinetic Egress Radar for AI Agents and LLM Runtimes.**  
