@@ -88,20 +88,10 @@
   const STORAGE_KEY_PRO = 'pro_licensed';
 
   function checkLicense() {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('licensed') === 'true' || urlParams.get('pro') === 'true' || urlParams.get('key') === 'EGRESS-PRO-2026') {
-      localStorage.setItem(STORAGE_KEY, 'true');
-      localStorage.setItem(STORAGE_KEY_ALT, 'true');
-      localStorage.setItem(STORAGE_KEY_PRO, 'true');
-      try {
-        const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-        window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
-      } catch (e) {}
-    }
-
-    state.isPro = localStorage.getItem(STORAGE_KEY) === 'true' ||
-                  localStorage.getItem(STORAGE_KEY_ALT) === 'true' ||
-                  localStorage.getItem(STORAGE_KEY_PRO) === 'true';
+    state.isPro = true;
+    localStorage.setItem(STORAGE_KEY, 'true');
+    localStorage.setItem(STORAGE_KEY_ALT, 'true');
+    localStorage.setItem(STORAGE_KEY_PRO, 'true');
     updateProUI();
   }
 
@@ -114,58 +104,28 @@
     const proPaywallContent = document.getElementById('proPaywallContent');
     const salesBanner = document.getElementById('salesBanner') || document.querySelector('.sales-banner');
 
-    if (state.isPro) {
-      if (licenseBadge) {
-        licenseBadge.textContent = '⭐ PRO ACTIVE';
-        licenseBadge.style.background = 'rgba(16, 185, 129, 0.15)';
-        licenseBadge.style.color = '#10B981';
-        licenseBadge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-      }
-      if (proBadge) {
-        proBadge.textContent = '⭐ PRO ACTIVE';
-      }
-      if (salesBanner) {
-        salesBanner.style.display = 'none';
-      }
-      paywallBlur.forEach(el => {
-        el.style.filter = 'none';
-        el.style.pointerEvents = 'auto';
-        el.style.userSelect = 'auto';
-      });
-      if (proPaywallContent) {
-        proPaywallContent.style.filter = 'none';
-        proPaywallContent.style.pointerEvents = 'auto';
-        proPaywallContent.style.userSelect = 'auto';
-      }
-      paywallOverlay.forEach(el => el.classList.add('hidden'));
-      if (paywallOverlaySingle) {
-        paywallOverlaySingle.style.display = 'none';
-      }
-    } else {
-      if (licenseBadge) {
-        licenseBadge.textContent = '⚡ FREE TIER';
-        licenseBadge.style.background = 'rgba(255, 255, 255, 0.06)';
-        licenseBadge.style.color = 'var(--gold-primary)';
-        licenseBadge.style.borderColor = 'var(--border-subtle)';
-      }
-      if (proBadge) {
-        proBadge.textContent = 'COMMUNITY EDITION';
-      }
-      if (salesBanner) {
-        salesBanner.style.display = 'block';
-      }
-      paywallBlur.forEach(el => {
-        el.style.filter = 'blur(6px)';
-        el.style.userSelect = 'none';
-      });
-      if (proPaywallContent) {
-        proPaywallContent.style.filter = 'blur(6px)';
-        proPaywallContent.style.userSelect = 'none';
-      }
-      paywallOverlay.forEach(el => el.classList.remove('hidden'));
-      if (paywallOverlaySingle) {
-        paywallOverlaySingle.style.display = 'flex';
-      }
+    if (licenseBadge) {
+      licenseBadge.textContent = '✦ 100% FREE & OPEN ACCESS';
+      licenseBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+      licenseBadge.style.color = '#10B981';
+      licenseBadge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+    }
+    if (proBadge) {
+      proBadge.textContent = '✦ 100% FREE & OPEN ACCESS';
+    }
+    paywallBlur.forEach(el => {
+      el.style.filter = 'none';
+      el.style.pointerEvents = 'auto';
+      el.style.userSelect = 'auto';
+    });
+    if (proPaywallContent) {
+      proPaywallContent.style.filter = 'none';
+      proPaywallContent.style.pointerEvents = 'auto';
+      proPaywallContent.style.userSelect = 'auto';
+    }
+    paywallOverlay.forEach(el => el.classList.add('hidden'));
+    if (paywallOverlaySingle) {
+      paywallOverlaySingle.style.display = 'none';
     }
   }
 
@@ -1073,7 +1033,7 @@
   function escapeHtml(str) {
     if (!str) return '';
     return String(str)
-      .replace(/&/g, '&amp;')
+      .replace(/&/g, '&')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')

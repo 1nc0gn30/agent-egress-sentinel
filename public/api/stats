@@ -1,0 +1,11 @@
+{
+  "status": "ONLINE",
+  "service": "agent-egress-sentinel",
+  "version": "2.5.0",
+  "port": 8095,
+  "proxy_port": 8096,
+  "mode": "ZERO_EGRESS_ENFORCED",
+  "inspected_packets": 14820,
+  "blocked_egress": 0,
+  "allowed_loopback": 14820
+}

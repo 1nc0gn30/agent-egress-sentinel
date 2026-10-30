@@ -23,7 +23,7 @@
 - **Audio / SFX**: Heavy mechanical lock engage sound, crisp kinetic UI clicks.
 
 ### Scene 4: Sovereign Call to Action (12.0s – 15.0s)
-- **Visual**: Clean glassmorphic title card with dual Stripe and Solana DePay gold tokens, URL `agent-egress.nullai.tech`, and founding lifetime badge ($19 Lifetime Access).
+- **Visual**: Clean glassmorphic title card with dual Stripe and Solana Tip gold tokens, URL `agent-egress.nullai.tech`, and founding lifetime badge ($19 Lifetime Access).
 - **On-Screen Typography**: `AGENT EGRESS SENTINEL • AUDIT YOUR AGENTS NOW`
 - **Sub-Text**: `Engineered by Neal Frazier Tech (@1nc0gn30) • NullAI Platform`
 - **Audio / SFX**: Resonant 528Hz harmonic resolving chord, subtle atmospheric drone.

@@ -89,6 +89,24 @@ class EgressRequestHandler(SimpleHTTPRequestHandler):
         path = parsed_url.path
         query = parse_qs(parsed_url.query)
 
+        # Health & Status
+        if path in ("/health", "/api/health", "/status", "/api/status"):
+            stats = self.server.collector.get_stats()
+            self._send_json({
+                "status": "ok",
+                "service": "agent-egress-sentinel",
+                "version": "2.5.0",
+                "web_port": self.server.server_address[1],
+                "proxy_port": self.server.proxy.port if self.server.proxy else 8195,
+                "proxy_running": self.server.proxy.is_running if self.server.proxy else False,
+                "quarantine_mode": self.server.rules.quarantine_mode,
+                "total_requests": stats.get("total_requests", 0),
+                "total_domains": stats.get("total_domains", 0),
+                "total_quarantined": stats.get("total_quarantined", 0),
+                "license": "100% Free & Open Access (Zero Paywalls)"
+            })
+            return
+
         # SSE Real-Time Stream
         if path == "/api/stream":
             self._handle_sse_stream()

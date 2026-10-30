@@ -1,0 +1,308 @@
+/*
+ * Agent Egress Sentinel — Wave Interactive States
+ * Visual Anchor: Precision Telemetry Console Interactive States
+ * Purpose: Accessible :focus-visible outlines, tactile hover micro-interactions,
+ *          disciplined empty-state telemetry presentation, error states, and
+ *          strict prefers-reduced-motion guarantees.
+ * Only targets selectors existing in public/index.html.
+ */
+
+/* ==========================================================================
+   1. Keyboard Accessibility & :focus-visible Focus Rings
+   ========================================================================== */
+
+/* Base keyboard navigation ring across all focusable elements */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--gold-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.25);
+}
+
+/* Primary Amber-Gold Action Buttons */
+.btn-gold:focus-visible {
+  outline: 2px solid var(--gold-light);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.45);
+}
+
+/* Solana & Web3 Purple Buttons */
+.btn-purple:focus-visible {
+  outline: 2px solid #E9D5FF;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.4);
+}
+
+/* Secondary & Ghost Buttons */
+.btn-secondary:focus-visible {
+  outline: 2px solid var(--gold-primary);
+  outline-offset: 2px;
+  border-color: var(--gold-primary);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.25);
+}
+
+/* Category Filter Tabs */
+.category-tab:focus-visible {
+  outline: 2px solid var(--gold-primary);
+  outline-offset: 2px;
+  border-color: var(--gold-primary);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+}
+
+/* Modal Dismiss Buttons */
+.modal-close:focus-visible {
+  outline: 2px solid var(--gold-primary);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Text & Hyperlink Triggers */
+#btn-paywall-key:focus-visible,
+#btnKeyOverlay:focus-visible {
+  outline: 2px solid var(--gold-primary);
+  outline-offset: 2px;
+  border-radius: 3px;
+  color: var(--gold-primary);
+}
+
+/* Interactive License Status Badge */
+#licenseBadge:focus-visible {
+  outline: 2px solid var(--gold-primary);
+  outline-offset: 2px;
+}
+
+/* Footer Hyperlinks */
+footer a:focus-visible {
+  outline: 2px solid var(--gold-primary);
+  outline-offset: 3px;
+  border-radius: 2px;
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   2. Tactile Hover & Active States (Micro-Interactions)
+   Tokens: 120ms-160ms transition duration, EASE_OUT_QUINT curve
+   ========================================================================== */
+
+/* Primary Button Hover & Tactile Press */
+.btn-gold {
+  transition: background-color 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.12s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.btn-gold:hover {
+  background: var(--gold-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(212, 175, 55, 0.35);
+}
+
+.btn-gold:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(212, 175, 55, 0.2);
+}
+
+/* Purple Action Button Hover & Press */
+.btn-purple {
+  transition: background-color 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.12s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.btn-purple:hover {
+  background: rgba(126, 34, 206, 0.5);
+  border-color: rgba(168, 85, 247, 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(168, 85, 247, 0.25);
+}
+
+.btn-purple:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(168, 85, 247, 0.15);
+}
+
+/* Secondary Button Hover & Press */
+.btn-secondary {
+  transition: background-color 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+              color 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.12s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(212, 175, 55, 0.4);
+  color: var(--gold-light);
+}
+
+.btn-secondary:active {
+  background: rgba(255, 255, 255, 0.04);
+  transform: translateY(0);
+}
+
+/* Category Filter Tabs Hover & Press */
+.category-tab {
+  transition: background-color 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+              color 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.1s ease;
+}
+
+.category-tab:hover {
+  border-color: rgba(212, 175, 55, 0.45);
+  color: var(--text-main);
+  background: rgba(212, 175, 55, 0.06);
+}
+
+.category-tab:active {
+  transform: scale(0.98);
+}
+
+/* Text Action Links */
+#btn-paywall-key:hover,
+#btnKeyOverlay:hover {
+  color: var(--gold-primary);
+  text-decoration: underline;
+}
+
+/* Header License Badge Hover */
+#licenseBadge {
+  transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+#licenseBadge:hover {
+  background: rgba(212, 175, 55, 0.12);
+  border-color: var(--gold-primary);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+}
+
+/* Modal Close Button */
+.modal-close {
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.modal-close:hover {
+  color: #FFFFFF;
+  transform: scale(1.1);
+}
+
+.modal-close:active {
+  transform: scale(0.95);
+}
+
+/* Table Row Precision Hover */
+table tbody tr {
+  transition: background-color 0.14s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+table tbody tr:hover {
+  background-color: rgba(212, 175, 55, 0.035);
+}
+
+table tbody tr:hover td {
+  color: var(--text-main);
+}
+
+/* Form Input Hover & Precision Border Glow */
+.input-field {
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+}
+
+.input-field:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Footer Links Hover */
+footer a {
+  transition: color 0.15s ease;
+}
+
+footer a:hover {
+  color: var(--gold-primary);
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   3. Empty State Presentation
+   Telemetry Console idle & awaiting-stream state styling
+   ========================================================================== */
+
+/* Traffic Stream Empty / Listening Table Cell */
+#trafficTableBody tr td[colspan] {
+  padding: 32px 18px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+  background: rgba(16, 16, 22, 0.4);
+  border-radius: 6px;
+}
+
+/* Domain List Container Empty Placeholder */
+#domainList:empty {
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Deep Inspection Modal Content Empty State */
+#inspectModalContent:empty {
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ==========================================================================
+   4. Error & Validation Presentation
+   ========================================================================== */
+
+/* Form Input Validation: Invalid state */
+.input-field:invalid {
+  border-color: #EF4444;
+  box-shadow: 0 0 0 1px #EF4444, 0 0 8px rgba(239, 68, 68, 0.2);
+}
+
+.input-field:invalid:focus-visible {
+  outline: 2px solid #EF4444;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.25);
+}
+
+/* Input Placeholder Legibility */
+.input-field::placeholder {
+  color: var(--text-dim);
+  opacity: 0.75;
+  font-family: var(--font-mono);
+}
+
+/* ==========================================================================
+   5. Accessibility: Prefers-Reduced-Motion Guarantees
+   Instant transitions without motion displacement for sensitive users.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  .btn-gold:hover,
+  .btn-purple:hover,
+  .btn-secondary:hover,
+  .category-tab:hover,
+  .modal-close:hover {
+    transform: none !important;
+  }
+}
