@@ -234,7 +234,7 @@ class EgressCollector:
                         COALESCE(SUM(bytes_sent), 0) as total_bytes_sent,
                         COALESCE(SUM(bytes_recv), 0) as total_bytes_recv,
                         COALESCE(AVG(latency_ms), 0) as avg_latency_ms,
-                        SUM(CASE WHEN quarantined = 1 THEN 1 ELSE 0 END) as total_quarantined
+                        COALESCE(SUM(CASE WHEN quarantined = 1 THEN 1 ELSE 0 END), 0) as total_quarantined
                     FROM egress_events;
                 """).fetchone()
                 return dict(row) if row else {}
@@ -361,7 +361,7 @@ class EgressCollector:
                 "title": "Agent Egress Sentinel — Synthesized API Blueprint",
                 "version": "1.0.0",
                 "description": "Reverse-engineered OpenAPI specification synthesized directly from AI agent network traffic.",
-                "contact": {"name": "Neal Frazier Tech", "url": "https://nealfrazier.tech"},
+                "contact": {"name": "1nc0gn30 • NullAI", "url": "https://nullai.tech"},
             },
             "servers": [{"url": s} for s in sorted(list(servers_set))] or [{"url": "https://api.openai.com"}],
             "paths": paths,

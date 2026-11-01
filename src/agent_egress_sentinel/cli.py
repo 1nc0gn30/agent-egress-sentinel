@@ -55,7 +55,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
 
     print("\n" + "=" * 60)
     print("  🛡️  AGENT EGRESS SENTINEL — ACTIVE DEFENSE & RADAR")
-    print("  Engineered by Neal Frazier Tech (@1nc0gn30)")
+    print("  Engineered by 1nc0gn30 (@1nc0gn30)")
     print("=" * 60)
     print(f"  • Web Radar Dashboard: http://{args.web_host}:{args.web_port}")
     print(f"  • Egress Proxy Tunnel: http://{args.proxy_host}:{args.proxy_port}")

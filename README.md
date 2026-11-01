@@ -14,13 +14,13 @@
 # 🛡️ Agent Egress Sentinel
 
 > **Autonomous Zero-Dependency Network Interceptor, Domain Classifier, and Kinetic Egress Radar for AI Agents and LLM Runtimes.**  
-> *Engineered by Neal Frazier Tech ([@1nc0gn30](https://github.com/1nc0gn30)) • NullAI Platform*
+> *Engineered by 1nc0gn30 • NullAI ([@1nc0gn30](https://github.com/1nc0gn30)) • NullAI Platform*
 
 ---
 
 ## 🏛️ Architectural Overview
 
-**Agent Egress Sentinel** is an official sovereign tool in the **[Zoth Studio v2](https://zoth.nullai.tech)** (71-Tool Matrix) and **[ZothOS Linux 3.3](https://zothos.nullai.tech)** ecosystem.
+**Agent Egress Sentinel** is an official sovereign tool in the **[Zoth Studio v2](https://zoth.nullai.tech)** (72-Tool Matrix) and **[ZothOS Linux 3.3](https://zothos.nullai.tech)** ecosystem.
 
 | Property | Specification |
 | :--- | :--- |
@@ -77,7 +77,7 @@ agent-egress serve --web-port 8095 --proxy-port 8195
 
 ---
 
-## ☕ Support Neal Frazier Tech (Zero Paywalls)
+## ☕ Support 1nc0gn30 • NullAI (Zero Paywalls)
 
 All tools across the Zoth Studio ecosystem are 100% free, unlocked, and open-source by default. If this utility provides value to your workflow, support development via:
 
@@ -87,5 +87,5 @@ All tools across the Zoth Studio ecosystem are 100% free, unlocked, and open-sou
 ---
 
 <div align="center">
-  <sub>Engineered by <b>Neal Frazier Tech</b> (<a href="https://github.com/1nc0gn30">@1nc0gn30</a>) &bull; <a href="https://nullai.tech">NullAI Platform</a> &bull; <a href="https://zoth.nullai.tech">Zoth Studio v2</a></sub>
+  <sub>Engineered by <b>1nc0gn30 • NullAI</b> (<a href="https://github.com/1nc0gn30">@1nc0gn30</a>) &bull; <a href="https://nullai.tech">NullAI Platform</a> &bull; <a href="https://zoth.nullai.tech">Zoth Studio v2</a></sub>
 </div>

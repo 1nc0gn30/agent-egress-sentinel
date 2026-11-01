@@ -6,8 +6,8 @@ and Telemetry Radar for AI Agents and LLM Runtimes.
 """
 
 __version__ = "0.1.0"
-__author__ = "Neal Frazier (@1nc0gn30)"
-__entity__ = "Neal Frazier Tech • NullAI Platform"
+__author__ = "1nc0gn30 (@1nc0gn30)"
+__entity__ = "1nc0gn30 • NullAI • NullAI Platform"
 
 from .collector import EgressCollector, get_default_collector, NetworkEvent
 from .proxy import EgressProxy

@@ -228,6 +228,31 @@ class EgressRequestHandler(SimpleHTTPRequestHandler):
             self._send_json({"status": "ok", "message": "Egress logs cleared"})
             return
 
+        if path == "/api/record":
+            ev = NetworkEvent(
+                id=data.get("id") or f"ev-{int(time.time()*1000)}",
+                timestamp=float(data.get("timestamp") or time.time()),
+                agent_name=data.get("agent_name", "autonomous_planner"),
+                domain=data.get("domain", "api.openai.com"),
+                remote_ip=data.get("remote_ip", "104.18.24.1"),
+                remote_port=int(data.get("remote_port", 443)),
+                protocol=data.get("protocol", "HTTPS"),
+                method=data.get("method", "POST"),
+                url_path=data.get("url_path", "/v1/chat/completions"),
+                status_code=int(data.get("status_code", 200)),
+                bytes_sent=int(data.get("bytes_sent", 0)),
+                bytes_recv=int(data.get("bytes_recv", 0)),
+                latency_ms=float(data.get("latency_ms", 42.0)),
+                category=data.get("category") or self.server.rules.classify_domain(data.get("domain", "")),
+                quarantined=bool(data.get("quarantined", False)),
+                request_sample=data.get("request_sample", '{"model":"gpt-4o","stream":true}'),
+                response_sample=data.get("response_sample", '{"id":"chatcmpl-99","status":"ok"}'),
+                notes=data.get("notes", ""),
+            )
+            self.server.collector.record(ev)
+            self._send_json({"status": "ok", "event": ev.to_dict()})
+            return
+
         if path == "/api/run":
             cmd = data.get("command")
             agent_name = data.get("agent_name", "web_triggered_agent")

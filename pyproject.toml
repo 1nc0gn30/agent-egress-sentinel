@@ -7,7 +7,7 @@ name = "agent-egress-sentinel"
 version = "0.1.0"
 description = "Autonomous AI Agent Network Egress Sentinel, Domain Sniffer & Endpoint Telemetry Monitor"
 readme = "README.md"
-authors = [{ name = "Neal Frazier", email = "neal@nullai.tech" }]
+authors = [{ name = "1nc0gn30", email = "neal@nullai.tech" }]
 license = { text = "MIT" }
 requires-python = ">=3.9"
 dependencies = []

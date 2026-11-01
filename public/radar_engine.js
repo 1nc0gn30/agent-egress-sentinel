@@ -1,7 +1,7 @@
 /**
  * Agent Egress Sentinel — Kinetic Domain Radar & Telemetry Engine
  * Pure Vanilla Canvas & Reactive DOM Architecture. Zero external JS dependencies.
- * Engineered by Neal Frazier Tech (@1nc0gn30) • NullAI Platform
+ * Engineered by 1nc0gn30 (@1nc0gn30) • NullAI Platform
  */
 
 (function () {
@@ -937,11 +937,24 @@
           status_code: isQuarantined ? 403 : 200,
           bytes_sent: target.sent,
           bytes_recv: isQuarantined ? 0 : target.recv,
-          latency_ms: 45 + Math.random() * 80,
+          latency_ms: Math.round(45 + Math.random() * 80),
           category: target.category,
           quarantined: isQuarantined,
-          notes: isQuarantined ? 'Quarantined by policy' : 'Simulated agent traffic',
+          request_sample: JSON.stringify({ agent: 'autonomous_planner', target: target.domain, path: target.path, method: target.method }),
+          response_sample: isQuarantined ? '{"error":"Egress quarantined by Sentinel RulesEngine"}' : '{"status":"ok","verified":true}',
+          notes: isQuarantined ? 'Quarantined by policy (' + state.stats.quarantine_mode + ')' : 'Verified Egress Stream',
         };
+
+        if (isLocalDaemon) {
+          fetch('/api/record', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(mockEvent)
+          }).then(() => {
+            fetchStats();
+            fetchDomains();
+          }).catch(() => {});
+        }
 
         state.events.unshift(mockEvent);
         if (!state.domains.has(target.domain)) {
