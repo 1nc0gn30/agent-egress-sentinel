@@ -89,3 +89,60 @@ All tools across the Zoth Studio ecosystem are 100% free, unlocked, and open-sou
 <div align="center">
   <sub>Engineered by <b>1nc0gn30 • NullAI</b> (<a href="https://github.com/1nc0gn30">@1nc0gn30</a>) &bull; <a href="https://nullai.tech">NullAI Platform</a> &bull; <a href="https://zoth.nullai.tech">Zoth Studio v2</a></sub>
 </div>
+
+---
+
+## 🏛️ ZothOS v3.4, Zoth Studio v2 & Obsidian Second Brain Ecosystem
+
+```mermaid
+flowchart LR
+    subgraph ZothOS["🐧 ZothOS v3.4 CLI & Braille TUI"]
+        CLI["agent-egress-sentinel --help / --json"]
+        TUI["agent-egress-sentinel-tui<br/>Unicode U+2800 2x4 Braille"]
+    end
+
+    subgraph Workstation["⚡ Sovereign Workstation"]
+        WEB["https://agent-egress.nullai.tech<br/>REST API & /health"]
+    end
+
+    subgraph Studio["🌌 Zoth Studio v2 & ZothOS-Lite"]
+        GODMODE["http://127.0.0.1:3000/tools/agent-egress-sentinel<br/>God-Mode Workstation"]
+        LITE["http://127.0.0.1:8145<br/>ZothOS-Lite Web Desktop"]
+    end
+
+    subgraph SecondBrain["💎 Obsidian Second Brain & STDP"]
+        TRACKER["http://127.0.0.1:8151<br/>Zoth Obsidian Tracker"]
+        NEURO["http://127.0.0.1:8094<br/>Neuro-Memory STDP Cortex"]
+        NOTE["Studio/Tools/Studio agent-egress-sentinel.md"]
+    end
+
+    CLI --> WEB
+    TUI --> WEB
+    WEB <--> GODMODE
+    WEB <--> LITE
+    WEB --> TRACKER
+    TRACKER <--> NOTE
+    NOTE <--> NEURO
+```
+
+### Cross-Surface Integration Matrix
+
+| Surface | Endpoint / Binary | Capabilities |
+| :--- | :--- | :--- |
+| **Standalone Workstation** | `https://agent-egress.nullai.tech` | 100% Free & Open-Access Web Deck, live `/health` & REST telemetry |
+| **Zoth Studio v2 Route** | `http://127.0.0.1:3000/tools/agent-egress-sentinel` | Interactive God-Mode component inside Zoth Studio (`https://zoth.nullai.tech`) |
+| **ZothOS v3.4 CLI & TUI** | `agent-egress-sentinel` / `agent-egress-sentinel-tui` | Global binary in `/usr/local/bin/` with Unicode `U+2800` Braille TUI & `--json` output |
+| **ZothOS-Lite Web Desktop** | `http://127.0.0.1:8145` | Browser-native KDE-style window manager & terminal launcher |
+| **Zoth Obsidian Tracker** | `http://127.0.0.1:8151` | Interactive Obsidian Second Brain vault explorer (`~/Documents/Obsidian Vault/Studio/Tools/Studio agent-egress-sentinel.md`) |
+| **Neuro-Memory STDP Cortex** | `http://127.0.0.1:8094` | 3-Factor STDP synaptic memory daemon & 21-tool MCP server |
+
+```bash
+# Inspect CLI & Unicode U+2800 Braille TUI on ZothOS v3.4
+agent-egress-sentinel --help
+agent-egress-sentinel-tui --status
+agent-egress-sentinel-tui --json
+
+# Verify Second Brain Vault & 12-Step Verification Gallery on :8151
+zoth-obsidian-tracker --verify
+```
+
