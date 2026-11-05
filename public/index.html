@@ -921,5 +921,37 @@
 
   <script src="/radar_engine.js"></script>
   <script src="/assets/sovereign-upgrade.js" defer></script>
+
+  <script src="/sovereign_tutorial.js"></script>
+  <script>
+    window.addEventListener("DOMContentLoaded", function() {
+      if (window.createSovereignTutorial) {
+        window.createSovereignTutorial({
+          toolId: "agent-egress-sentinel",
+          toolName: "Agent Egress Sentinel",
+          tagline: "Track and block secret internet calls from sneaky AI tools!",
+          accentColor: "#F59E0B",
+          steps: [
+            {
+              icon: "📡",
+              title: "What is Egress Traffic?",
+              desc: "Egress is data leaving your computer to the internet. Many AI libraries secretly phone home with telemetry, logs, or your prompt secrets without telling you!"
+            },
+            {
+              icon: "🛑",
+              title: "The Egress Firewall Radar",
+              desc: "This radar catches every outbound HTTP/WebSocket connection in real time and can block unauthorized domains instantly."
+            },
+            {
+              icon: "🛡️",
+              title: "Zero-Egress Mode",
+              desc: "Flip the switch to Zero-Egress to ensure 100% of your AI workloads stay strictly on your local PC loopback (127.0.0.1)."
+            }
+          ]
+        });
+      }
+    });
+  </script>
+
 </body>
 </html>
