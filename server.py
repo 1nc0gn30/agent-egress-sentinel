@@ -24,7 +24,7 @@ from agent_egress_sentinel.server import run_server
 def main():
     parser = argparse.ArgumentParser(description="Agent Egress Sentinel Server")
     parser.add_argument("--web-host", default="127.0.0.1", help="Web UI host (default: 127.0.0.1)")
-    parser.add_argument("--web-port", "-p", type=int, default=8095, help="Web UI port (default: 8095)")
+    parser.add_argument("--web-port", "-p", "--port", dest="web_port", type=int, default=8095, help="Web UI port (default: 8095)")
     parser.add_argument("--proxy-host", default="127.0.0.1", help="Proxy listen host (default: 127.0.0.1)")
     parser.add_argument("--proxy-port", type=int, default=8195, help="Proxy listen port (default: 8195)")
     parser.add_argument("--quarantine", default="allow_all", choices=["allow_all", "block_telemetry", "zero_egress", "allowlist_only"])
