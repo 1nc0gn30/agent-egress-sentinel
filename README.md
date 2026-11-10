@@ -20,7 +20,7 @@
 
 ## 🏛️ Architectural Overview
 
-**Agent Egress Sentinel** is an official sovereign tool in the **[Zoth Studio v2](https://zoth.nullai.tech)** (72-Tool Matrix) and **[ZothOS Linux 3.3](https://zothos.nullai.tech)** ecosystem.
+**Agent Egress Sentinel** is an official sovereign tool in the **[Zoth Studio v2](https://zoth.nullai.tech)** (77-Tool Matrix) and **[ZothOS Linux 3.3](https://zothos.nullai.tech)** ecosystem.
 
 | Property | Specification |
 | :--- | :--- |
