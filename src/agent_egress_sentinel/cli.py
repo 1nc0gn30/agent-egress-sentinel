@@ -144,17 +144,41 @@ def cmd_run(args: argparse.Namespace) -> int:
 
 
 def cmd_stats(args: argparse.Namespace) -> int:
+    port = getattr(args, "port", 8095)
+    as_json = bool(getattr(args, "json", False))
+    live_health = None
+    try:
+        import urllib.request
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=2.0) as resp:
+            live_health = json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        pass
+
     collector = get_default_collector()
     stats = collector.get_stats()
     domains = collector.get_domains()
 
+    if as_json:
+        print(json.dumps({
+            "service": "agent-egress-sentinel",
+            "version": "2.5.0",
+            "online": live_health is not None,
+            "web_port": port,
+            "proxy_port": live_health.get("proxy_port", 8195) if live_health else 8195,
+            "daemon": live_health,
+            "stats": stats,
+            "domains": domains,
+        }, indent=2))
+        return 0
+
     print("\n--- Agent Egress Sentinel Stats ---")
-    print(f"Total Requests:    {stats.get('total_requests', 0)}")
-    print(f"Total Domains:     {stats.get('total_domains', 0)}")
+    print(f"Daemon Status:     {'ONLINE' if live_health else 'OFFLINE'} (http://127.0.0.1:{port})")
+    print(f"Total Requests:    {live_health.get('total_requests', stats.get('total_requests', 0)) if live_health else stats.get('total_requests', 0)}")
+    print(f"Total Domains:     {live_health.get('total_domains', stats.get('total_domains', 0)) if live_health else stats.get('total_domains', 0)}")
     print(f"Total Agents:      {stats.get('total_agents', 0)}")
     print(f"Total Bytes Sent:  {stats.get('total_bytes_sent', 0):,} bytes")
     print(f"Total Bytes Recv:  {stats.get('total_bytes_recv', 0):,} bytes")
-    print(f"Quarantined Reqs:  {stats.get('total_quarantined', 0)}")
+    print(f"Quarantined Reqs:  {live_health.get('total_quarantined', stats.get('total_quarantined', 0)) if live_health else stats.get('total_quarantined', 0)}")
 
     if domains:
         print("\nObserved Domains:")
@@ -197,14 +221,18 @@ def main(argv: Optional[List[str]] = None) -> int:
         description="Agent Egress Sentinel — Network Traffic Sniffer & Endpoint Monitor for AI Agents",
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose debug logging")
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    parser.add_argument("--version", action="version", version="agent-egress-sentinel 2.5.0")
+    parser.add_argument("--status", action="store_true", help="Display egress daemon status and summary stats")
+    parser.add_argument("--json", action="store_true", help="Emit telemetry in structured JSON format")
+    parser.add_argument("--port", type=int, default=8095, help="Web UI port (default: 8095)")
+    subparsers = parser.add_subparsers(dest="command", required=False)
 
     # serve command
     p_serve = subparsers.add_parser("serve", help="Start radar web dashboard and egress proxy daemon")
     p_serve.add_argument("--web-host", default=_default_bind_host(), help="Host interface (default: 127.0.0.1 or $ZOTH_BIND_HOST; use 0.0.0.0 only on trusted networks)")
     p_serve.add_argument("--web-port", type=int, default=8095, help="Web UI port (default: 8095)")
     p_serve.add_argument("--proxy-host", default="127.0.0.1", help="Proxy listen host (default: 127.0.0.1)")
-    p_serve.add_argument("--proxy-port", type=int, default=8096, help="Proxy listen port (default: 8096)")
+    p_serve.add_argument("--proxy-port", type=int, default=8195, help="Proxy listen port (default: 8195)")
     p_serve.add_argument(
         "--quarantine",
         default="allow_all",
@@ -215,7 +243,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     # run command
     p_run = subparsers.add_parser("run", help="Run an AI agent process under proxy supervision")
     p_run.add_argument("--agent-name", default="target_agent", help="Agent identifier tag")
-    p_run.add_argument("--proxy-port", type=int, default=8096, help="Proxy port to use (default: 8096)")
+    p_run.add_argument("--proxy-port", type=int, default=8195, help="Proxy port to use (default: 8195)")
     p_run.add_argument(
         "--quarantine",
         default="allow_all",
@@ -226,7 +254,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_run.add_argument("cmd", nargs=argparse.REMAINDER, help="Command and arguments to execute")
 
     # stats command
-    subparsers.add_parser("stats", help="Display summary stats of captured traffic")
+    p_stats = subparsers.add_parser("stats", help="Display summary stats of captured traffic")
+    p_stats.add_argument("--port", type=int, default=8095, help="Web UI port (default: 8095)")
+    p_stats.add_argument("--json", action="store_true", help="Emit telemetry in structured JSON format")
+
+    # status alias
+    p_status = subparsers.add_parser("status", help="Display egress daemon status and summary stats")
+    p_status.add_argument("--port", type=int, default=8095, help="Web UI port (default: 8095)")
+    p_status.add_argument("--json", action="store_true", help="Emit telemetry in structured JSON format")
 
     # export command
     p_export = subparsers.add_parser("export", help="Export traffic log to HAR 1.2 file")
@@ -242,11 +277,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = parser.parse_args(argv)
     setup_logging(args.verbose)
 
+    if getattr(args, "status", False) or (getattr(args, "json", False) and not args.command):
+        return cmd_stats(args)
+
     if args.command == "serve":
         return cmd_serve(args)
     elif args.command == "run":
         return cmd_run(args)
-    elif args.command == "stats":
+    elif args.command in ("stats", "status"):
         return cmd_stats(args)
     elif args.command == "export":
         return cmd_export(args)
@@ -254,6 +292,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         return cmd_openapi(args)
     elif args.command == "clear":
         return cmd_clear(args)
+    parser.print_help()
     return 0
 
 

@@ -1,17 +1,18 @@
 {
   "name": "agent-egress-sentinel",
   "version": "2.5.0",
-  "description": "Zero-dependency network traffic sniffer, domain classifier, and egress radar for AI agents and LLM runtimes",
+  "description": "Zero-dependency network traffic sniffer, domain classifier, and egress radar for AI agents and LLM runtimes.",
   "main": "public/radar_engine.js",
-  "homepage": "https://agent-egress.nullai.tech",
+  "homepage": "https://zoth.nullai.tech/tools/agent-egress-sentinel",
   "repository": {
     "type": "git",
     "url": "https://github.com/1nc0gn30/agent-egress-sentinel.git"
   },
   "scripts": {
-    "start": "python3 -m http.server 8095 --directory public",
+    "start": "python3 server.py --web-port 8095 --proxy-port 8195",
+    "serve": "python3 server.py --web-port 8095 --proxy-port 8195",
     "serve:public": "python3 -m http.server 8095 --directory public",
-    "test": "pytest tests/",
+    "test": "PYTHONPATH=src python3 -m pytest -q tests/",
     "test:ui": "python3 scripts/verify_ui.py"
   },
   "keywords": [
@@ -19,9 +20,8 @@
     "egress-sentinel",
     "network-sniffer",
     "radar",
-    "zero-cloud",
-    "sovereign"
+    "nullai"
   ],
-  "author": "1nc0gn30 (@1nc0gn30) • NullAI Platform",
+  "author": "1nc0gn30 (@1nc0gn30) • NullAI",
   "license": "MIT"
 }

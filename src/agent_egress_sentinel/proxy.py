@@ -101,7 +101,7 @@ class EgressProxy:
     def __init__(
         self,
         host: str = "127.0.0.1",
-        port: int = 8096,
+        port: int = 8195,
         collector: Optional[EgressCollector] = None,
         rules_engine: Optional[RulesEngine] = None,
         agent_name: str = "ai_agent",

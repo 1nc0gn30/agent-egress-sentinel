@@ -379,7 +379,7 @@ def run_server(
     web_host: str = "127.0.0.1",
     web_port: int = 8095,
     proxy_host: str = "127.0.0.1",
-    proxy_port: int = 8096,
+    proxy_port: int = 8195,
     collector: Optional[EgressCollector] = None,
     rules: Optional[RulesEngine] = None,
 ) -> Tuple[EgressServer, EgressProxy]:

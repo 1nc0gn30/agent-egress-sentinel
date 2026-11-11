@@ -119,7 +119,7 @@ class SocketMonitor(threading.Thread):
                         rem_port = _hex_to_port(rem_hex_port)
 
                         # Skip loopback to our own proxy
-                        if rem_ip in ("127.0.0.1", "0.0.0.0") and rem_port in (8096, 8095):
+                        if rem_ip in ("127.0.0.1", "0.0.0.0") and rem_port in (8195, 8096, 8095):
                             continue
 
                         conn_key = (rem_ip, rem_port)
@@ -158,7 +158,7 @@ class AgentProcessRunner:
     def __init__(
         self,
         proxy_host: str = "127.0.0.1",
-        proxy_port: int = 8096,
+        proxy_port: int = 8195,
         collector: Optional[EgressCollector] = None,
         rules: Optional[RulesEngine] = None,
     ):

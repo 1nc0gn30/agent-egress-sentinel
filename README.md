@@ -1,148 +1,120 @@
-<div align="center">
-  <img src="assets/hero-banner.svg" alt="Agent Egress Sentinel — Sovereign Architecture Banner" width="100%" />
-</div>
+# Agent Egress Sentinel
 
-<br />
+![Agent Egress Sentinel Hero Banner](assets/hero-banner.svg)
 
-<div align="center">
-  <a href="https://zoth.nullai.tech/tools/agent-egress-sentinel"><img src="https://img.shields.io/badge/Zoth_Studio_v2-Workspace-D4AF37?style=for-the-badge&logo=sparkles&logoColor=black" alt="Zoth Studio Workspace" /></a>
-  <a href="http://127.0.0.1:8095"><img src="https://img.shields.io/badge/Radar-Port_:8095-38BDF8?style=for-the-badge&logo=fastapi&logoColor=black" alt="Port :8095" /></a>
-  <a href="http://127.0.0.1:8195"><img src="https://img.shields.io/badge/Proxy-Port_:8195-10B981?style=for-the-badge&logo=shield&logoColor=black" alt="Proxy :8195" /></a>
-  <a href="https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X"><img src="https://img.shields.io/badge/☕_Buy_Us_a_Coffee-Stripe-D4AF37?style=for-the-badge" alt="Buy Us a Coffee" /></a>
-</div>
+**Agent Egress Sentinel** (`agent-egress-sentinel`) is a zero-dependency Python 3.9+ network interceptor, HTTP/HTTPS `CONNECT` egress proxy (`127.0.0.1:8195`), domain classifier, and real-time telemetry radar (`127.0.0.1:8095`) for AI agents and LLM runtimes. It tracks outbound requests, enforces domain quarantine policies, and exports captured traffic to HAR 1.2 or synthesized OpenAPI 3.0 specifications.
 
-# 🛡️ Agent Egress Sentinel
-
-> **Autonomous Zero-Dependency Network Interceptor, Domain Classifier, and Kinetic Egress Radar for AI Agents and LLM Runtimes.**  
-> *Engineered by 1nc0gn30 • NullAI ([@1nc0gn30](https://github.com/1nc0gn30)) • NullAI Platform*
+- **Zoth Studio v2 Dossier**: [https://zoth.nullai.tech/tools/agent-egress-sentinel](https://zoth.nullai.tech/tools/agent-egress-sentinel)
+- **Repository**: [https://github.com/1nc0gn30/agent-egress-sentinel](https://github.com/1nc0gn30/agent-egress-sentinel)
+- **Default Loopback Endpoints**: Web Radar `http://127.0.0.1:8095` • Egress Proxy `http://127.0.0.1:8195`
 
 ---
 
-## 🏛️ Architectural Overview
+## Overview
 
-**Agent Egress Sentinel** is an official sovereign tool in the **[Zoth Studio v2](https://zoth.nullai.tech)** (77-Tool Matrix) and **[ZothOS Linux 3.3](https://zothos.nullai.tech)** ecosystem.
-
-| Property | Specification |
-| :--- | :--- |
-| **Tool ID** | `agent-egress-sentinel` |
-| **Category** | `Security & Network` |
-| **Web Radar Port** | `http://127.0.0.1:8095` |
-| **Proxy Tunnel Port** | `http://127.0.0.1:8195` |
-| **Execution Mode** | Python Standard Library Server + Proxy Daemon |
-| **Zoth Studio Route** | [`http://127.0.0.1:3000/tools/agent-egress-sentinel`](http://127.0.0.1:3000/tools/agent-egress-sentinel) |
-| **License** | **100% Free & Open Access (Zero Paywalls)** |
+- **HTTP & HTTPS `CONNECT` Proxy (`EgressProxy`)**: Listens on `127.0.0.1:8195`, recording destination hostnames, byte counts, status codes, and latency across agent tool and SDK calls.
+- **Process Supervision (`AgentProcessRunner`)**: Wraps child agent processes with `HTTP_PROXY` / `HTTPS_PROXY` pointed at `127.0.0.1:8195` while sampling `/proc/net/tcp` socket states to detect direct-socket bypasses.
+- **4 Quarantine Policy Modes (`RulesEngine`)**:
+  - `allow_all`: Log and classify all outbound destinations without blocking.
+  - `block_telemetry`: Block analytics, crash-reporting, and telemetry beacons while allowing LLM and API traffic.
+  - `allowlist_only`: Permit only domains explicitly added to the allowlist.
+  - `zero_egress`: Quarantine 100% of external network traffic for air-gapped agent runs.
+- **HAR 1.2 & OpenAPI 3.0 Export**: Exports captured traces to standard HAR 1.2 archives or synthesizes OpenAPI 3.0 schemas directly from observed API paths (ready for offline replay in `agent-mock-twin`).
 
 ---
 
-## 💎 What It Does & How It Works
+## Architecture
 
-- **Zero-Dependency Python Standard Library**: Operates completely out-of-the-box using standard `socket`, `select`, `sqlite3`, `http.server`, and `threading`. Zero external `pip` dependencies.
-- **In-Memory TLS ClientHello SNI Extractor**: Sniffs destination hostnames directly from the initial TLS handshake without breaking SSL certificate chains or requiring self-signed root cert installations.
-- **Kinetic Orbital Radar Dashboard**: Real-time concentric visual radar mapping destinations across LLM APIs, Model Hubs, Telemetry Sinks, Search Engines, and Local loopback services.
-- **Autonomous Rules & Kernel Quarantine**:
-  - `ALLOW_ALL`: Monitor and trace all agent outbound requests in real time.
-  - `BLOCK_TELEMETRY`: Blackhole tracking pings (Segment, PostHog, Sentry, Datadog) while allowing model inference.
-  - `ZERO_EGRESS`: Strict air-gap mode isolating all egress except localhost/127.0.0.1.
-  - `ALLOWLIST_ONLY`: Restrict outbound connections strictly to verified domains.
-- **Compliance HAR 1.2 & OpenAPI Exporter**: Generates standard HTTP Archive (HAR 1.2) traces and synthesized OpenAPI 3.0 specs of agent-discovered endpoints.
+```text
+Agent Process (HTTP_PROXY / HTTPS_PROXY -> 127.0.0.1:8195)
+        │
+        ▼
+EgressProxy (:8195) ──► RulesEngine (allow_all | block_telemetry | allowlist_only | zero_egress)
+        │
+        ▼
+TrafficCollector (SQLite) ──► Radar Web UI (:8095) + SSE (/api/stream) + HAR / OpenAPI Export
+```
 
 ---
 
-## 🛠️ ZothOS CLI & Daemon Commands
-
-The CLI is pre-installed in `/usr/local/bin/agent-egress-sentinel` (aliased as `agent-egress`):
+## Quickstart
 
 ```bash
-# Check daemon health & ZothOS integration status
+git clone https://github.com/1nc0gn30/agent-egress-sentinel.git
+cd agent-egress-sentinel
+python3 -m pip install -e .
+
+# Start Web Radar (:8095) and Egress Proxy (:8195)
+agent-egress serve --web-host 127.0.0.1 --web-port 8095 --proxy-host 127.0.0.1 --proxy-port 8195 --quarantine block_telemetry
+```
+
+Or run directly from the repository checkout:
+
+```bash
+python3 server.py --web-port 8095 --proxy-port 8195
+```
+
+Open `http://127.0.0.1:8095` in your browser.
+
+---
+
+## CLI & ZothOS v3.4.0 Integration
+
+`agent-egress` (`./bin/agent-egress` and `./bin/agent-egress-sentinel-tui`) supervises child processes, inspects daemon metrics, and exports traces:
+
+```bash
+# Inspect live daemon health and observed domain stats
 agent-egress --status
+agent-egress --json
+agent-egress stats --port 8095 --json
 
-# Print current session statistics & observed domains
-agent-egress stats
+# Run an AI agent command under proxy supervision on :8195 and export HAR 1.2
+agent-egress run --agent-name researcher_01 --proxy-port 8195 --quarantine block_telemetry --export-har session.har -- python3 my_agent.py
 
-# Run an arbitrary agent script under sentinel proxy supervision
-agent-egress run python3 my_agent.py
+# Export captured traffic to HAR 1.2 or OpenAPI 3.0
+agent-egress export -o agent-traffic.har
+agent-egress openapi -o openapi-spec.json
 
-# Export network traffic trace to HAR 1.2 format
-agent-egress export agent-traffic.har
-
-# Synthesize discovered endpoints into OpenAPI 3.0 specification
-agent-egress openapi openapi-spec.json
-
-# Clear historical database and traffic events
+# Clear historical egress logs
 agent-egress clear
-
-# Start radar web UI (:8095) and proxy tunnel (:8195)
-agent-egress serve --web-port 8095 --proxy-port 8195
 ```
 
 ---
 
-## ☕ Support 1nc0gn30 • NullAI (Zero Paywalls)
+## REST API Reference
 
-All tools across the Zoth Studio ecosystem are 100% free, unlocked, and open-source by default. If this utility provides value to your workflow, support development via:
+Mutating `POST` routes enforce local-origin CSRF validation (`127.0.0.1`, `localhost`, `[::1]`, or local CLI callers).
 
-- **Stripe "Buy Us a Coffee"**: [https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X](https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X)
-- **Solana Tip Address**: `GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK`
-
----
-
-<div align="center">
-  <sub>Engineered by <b>1nc0gn30 • NullAI</b> (<a href="https://github.com/1nc0gn30">@1nc0gn30</a>) &bull; <a href="https://nullai.tech">NullAI Platform</a> &bull; <a href="https://zoth.nullai.tech">Zoth Studio v2</a></sub>
-</div>
-
----
-
-## 🏛️ ZothOS v3.4, Zoth Studio v2 & Obsidian Second Brain Ecosystem
-
-```mermaid
-flowchart LR
-    subgraph ZothOS["🐧 ZothOS v3.4 CLI & Braille TUI"]
-        CLI["agent-egress-sentinel --help / --json"]
-        TUI["agent-egress-sentinel-tui<br/>Unicode U+2800 2x4 Braille"]
-    end
-
-    subgraph Workstation["⚡ Sovereign Workstation"]
-        WEB["https://agent-egress.nullai.tech<br/>REST API & /health"]
-    end
-
-    subgraph Studio["🌌 Zoth Studio v2 & ZothOS-Lite"]
-        GODMODE["http://127.0.0.1:3000/tools/agent-egress-sentinel<br/>God-Mode Workstation"]
-        LITE["http://127.0.0.1:8145<br/>ZothOS-Lite Web Desktop"]
-    end
-
-    subgraph SecondBrain["💎 Obsidian Second Brain & STDP"]
-        TRACKER["http://127.0.0.1:8151<br/>Zoth Obsidian Tracker"]
-        NEURO["http://127.0.0.1:8094<br/>Neuro-Memory STDP Cortex"]
-        NOTE["Studio/Tools/Studio agent-egress-sentinel.md"]
-    end
-
-    CLI --> WEB
-    TUI --> WEB
-    WEB <--> GODMODE
-    WEB <--> LITE
-    WEB --> TRACKER
-    TRACKER <--> NOTE
-    NOTE <--> NEURO
-```
-
-### Cross-Surface Integration Matrix
-
-| Surface | Endpoint / Binary | Capabilities |
+| Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| **Standalone Workstation** | `https://agent-egress.nullai.tech` | 100% Free & Open-Access Web Deck, live `/health` & REST telemetry |
-| **Zoth Studio v2 Route** | `http://127.0.0.1:3000/tools/agent-egress-sentinel` | Interactive God-Mode component inside Zoth Studio (`https://zoth.nullai.tech`) |
-| **ZothOS v3.4 CLI & TUI** | `agent-egress-sentinel` / `agent-egress-sentinel-tui` | Global binary in `/usr/local/bin/` with Unicode `U+2800` Braille TUI & `--json` output |
-| **ZothOS-Lite Web Desktop** | `http://127.0.0.1:8145` | Browser-native KDE-style window manager & terminal launcher |
-| **Zoth Obsidian Tracker** | `http://127.0.0.1:8151` | Interactive Obsidian Second Brain vault explorer (`~/Documents/Obsidian Vault/Studio/Tools/Studio agent-egress-sentinel.md`) |
-| **Neuro-Memory STDP Cortex** | `http://127.0.0.1:8094` | 3-Factor STDP synaptic memory daemon & 21-tool MCP server |
+| `GET` | `/` | Web radar dashboard (`public/index.html`) |
+| `GET` | `/health`, `/api/health`, `/status` | Service health, `web_port` (`8095`), `proxy_port` (`8195`), and `quarantine_mode` |
+| `GET` | `/api/stats` | Total requests, domains, agents, bytes sent/received, and quarantined count |
+| `GET` | `/api/domains` | Aggregated per-domain request counts, categories, and latency |
+| `GET` | `/api/traffic?limit=100` | Captured network events filterable by `domain`, `category`, and `agent` |
+| `GET` | `/api/rules` | Active quarantine mode plus custom allowlist and blocklist domains |
+| `GET` | `/api/export` | Download captured traffic as HAR 1.2 (`agent-egress.har`) |
+| `GET` | `/api/openapi`, `/api/export/openapi` | Download synthesized OpenAPI 3.0 JSON specification |
+| `GET` | `/api/stream` | Live Server-Sent Events (SSE) network event stream |
+| `POST` | `/api/quarantine` | Set quarantine policy (`{"mode": "block_telemetry"}`) |
+| `POST` | `/api/rules/block`, `/api/rules/allow` | Block or allowlist a specific domain (`{"domain": "telemetry.example.com"}`) |
+| `POST` | `/api/clear` | Clear captured egress logs |
+
+---
+
+## Testing & Verification
 
 ```bash
-# Inspect CLI & Unicode U+2800 Braille TUI on ZothOS v3.4
-agent-egress-sentinel --help
-agent-egress-sentinel-tui --status
-agent-egress-sentinel-tui --json
-
-# Verify Second Brain Vault & 12-Step Verification Gallery on :8151
-zoth-obsidian-tracker --verify
+PYTHONPATH=src python3 -m pytest -q
+./bin/agent-egress --help
+./bin/agent-egress --json
 ```
 
+---
+
+## Support & License
+
+100% free and open-source software under the MIT License.
+
+- Optional support: [Buy Us a Coffee via Stripe](https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X)
+- Engineered by **1nc0gn30** (`@1nc0gn30`, [https://1nc0gn30.si](https://1nc0gn30.si)) • **NullAI** ([https://nullai.tech](https://nullai.tech))
