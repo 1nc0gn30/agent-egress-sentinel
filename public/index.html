@@ -192,6 +192,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-wrap: wrap;
       padding: 12px 16px;
       max-width: 1280px;
       margin: 0 auto;
@@ -236,6 +237,8 @@
       border: 1px solid rgba(255, 255, 255, 0.1);
       color: var(--gold-primary);
       margin-left: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .header-actions {
       display: flex;
@@ -658,9 +661,9 @@
           <img src="assets/icon.png" alt="Agent Egress Sentinel Icon" class="logo-img" style="width: 28px; height: 28px; border-radius: 6px;">
         </div>
         <div>
-          <div style="display: flex; align-items: center;">
+          <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">
             <span class="brand-title">AGENT EGRESS SENTINEL</span>
-            <span class="tag-badge">v2.5 SOVEREIGN</span>
+            <span class="tag-badge" style="margin-left: 0;">v2.5 SOVEREIGN</span>
           </div>
           <div style="font-size: 10px; color: var(--text-muted);">Autonomous AI Network Interceptor & Telemetry Radar</div>
         </div>
@@ -836,10 +839,10 @@
       </div>
     </div>
 
-    <!-- Pro Feature Paywall Section: Kernel Egress Quarantine & Deep HAR Replay Vault -->
+    <!-- Kernel Egress Quarantine & Deep HAR Replay Vault -->
     <div id="proPaywallSection" class="conic-card" style="position: relative; margin-top: 24px; margin-bottom: 40px; padding: 24px; overflow: hidden; border: 1px solid rgba(212, 175, 55, 0.25);">
       
-      <!-- Blurred content (Pro feature locked in Free tier) -->
+      <!-- Kernel Egress Quarantine Controls (100% Open Access) -->
       <div id="proPaywallContent" class="pro-paywall-blur paywall-blur" style="filter: none; user-select: none; transition: filter 0.3s ease;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
           <div>
@@ -899,8 +902,10 @@
       <div>
         Engineered by 1nc0gn30 • NullAI (<a href="https://github.com/1nc0gn30" target="_blank" rel="noopener noreferrer" style="color: var(--gold-primary);">@1nc0gn30</a>) • <a href="https://nullai.tech" target="_blank" rel="noopener noreferrer" style="color: var(--gold-primary);">NullAI Platform</a>
       </div>
-      <div style="display: flex; gap: 16px;">
+      <div style="display: flex; gap: 16px; flex-wrap: wrap;">
         <a href="https://github.com/1nc0gn30/agent-egress-sentinel" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X" target="_blank" rel="noopener noreferrer">☕ Buy Us a Coffee (Stripe)</a>
+        <a href="solana:GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK">◎ Solana Tip (GG2e...dXoK)</a>
         <a href="https://nullai.tech" target="_blank" rel="noopener noreferrer">1nc0gn30 • NullAI</a>
         <a href="/api/stats" target="_blank">REST API</a>
         <a href="/sitemap.xml" target="_blank">Sitemap</a>
