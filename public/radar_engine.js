@@ -98,11 +98,6 @@
   function updateProUI() {
     const licenseBadge = document.getElementById('licenseBadge');
     const proBadge = document.getElementById('proStatusBadge');
-    const paywallBlur = document.querySelectorAll('.pro-paywall-blur');
-    const paywallOverlay = document.querySelectorAll('.pro-paywall-overlay');
-    const paywallOverlaySingle = document.getElementById('paywallOverlay');
-    const proPaywallContent = document.getElementById('proPaywallContent');
-    const salesBanner = document.getElementById('salesBanner') || document.querySelector('.sales-banner');
 
     if (licenseBadge) {
       licenseBadge.textContent = '✦ 100% FREE & OPEN ACCESS';
@@ -112,20 +107,6 @@
     }
     if (proBadge) {
       proBadge.textContent = '✦ 100% FREE & OPEN ACCESS';
-    }
-    paywallBlur.forEach(el => {
-      el.style.filter = 'none';
-      el.style.pointerEvents = 'auto';
-      el.style.userSelect = 'auto';
-    });
-    if (proPaywallContent) {
-      proPaywallContent.style.filter = 'none';
-      proPaywallContent.style.pointerEvents = 'auto';
-      proPaywallContent.style.userSelect = 'auto';
-    }
-    paywallOverlay.forEach(el => el.classList.add('hidden'));
-    if (paywallOverlaySingle) {
-      paywallOverlaySingle.style.display = 'none';
     }
   }
 
@@ -157,15 +138,13 @@
   window.activateLicense = window.activateWithKey;
 
   window.openProModal = function () {
-    const modal = document.getElementById('licenseModal') || document.getElementById('proModal') || document.querySelector('[data-alias="licenseModal"]') || document.querySelector('[data-alias="paywall-modal"]');
+    const modal = document.getElementById('licenseModal') || document.getElementById('proModal') || document.querySelector('[data-alias="licenseModal"]');
     if (modal) modal.classList.remove('hidden');
   };
   window.closeProModal = function () {
-    const modal = document.getElementById('licenseModal') || document.getElementById('proModal') || document.querySelector('[data-alias="licenseModal"]') || document.querySelector('[data-alias="paywall-modal"]');
+    const modal = document.getElementById('licenseModal') || document.getElementById('proModal') || document.querySelector('[data-alias="licenseModal"]');
     if (modal) modal.classList.add('hidden');
   };
-  window.openPaywallModal = window.openProModal;
-  window.closePaywallModal = window.closeProModal;
   window.openLicenseModal = window.openProModal;
   window.closeLicenseModal = window.closeProModal;
 

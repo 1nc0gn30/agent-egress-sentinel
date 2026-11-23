@@ -606,22 +606,6 @@
       } catch (e) {}
     })();
   </script>
-  <style id="zoth-open-access-override">
-    .paywall-overlay, .output-paywall-overlay, #outputPaywallOverlay, #schemaPaywallOverlay,
-    #transformerPaywallOverlay, #proPaywallModal, #licenseModal, #salesBanner, #founding-offer-banner,
-    #funnelHeroBanner, [data-alias="paywallOverlay"], [data-alias="founding-offer-banner"] {
-      display: none !important;
-      opacity: 0 !important;
-      pointer-events: none !important;
-    }
-    .paywall-wrap #outputPreview, .paywall-wrap #reportContentArea, .paywall-content,
-    .paywall-content.locked, .paywall-wrap.is-locked #outputPreview, .paywall-wrap.locked #outputPreview {
-      filter: none !important;
-      -webkit-filter: none !important;
-      user-select: auto !important;
-      pointer-events: auto !important;
-    }
-  </style>
 
 </head>
 
@@ -840,10 +824,10 @@
     </div>
 
     <!-- Kernel Egress Quarantine & Deep HAR Replay Vault -->
-    <div id="proPaywallSection" class="conic-card" style="position: relative; margin-top: 24px; margin-bottom: 40px; padding: 24px; overflow: hidden; border: 1px solid rgba(212, 175, 55, 0.25);">
+    <div id="kernelQuarantineSection" class="conic-card" style="position: relative; margin-top: 24px; margin-bottom: 40px; padding: 24px; overflow: hidden; border: 1px solid rgba(212, 175, 55, 0.25);">
       
       <!-- Kernel Egress Quarantine Controls (100% Open Access) -->
-      <div id="proPaywallContent" class="pro-paywall-blur paywall-blur" style="filter: none; user-select: none; transition: filter 0.3s ease;">
+      <div id="kernelQuarantineContent">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
           <div>
             <h3 style="font-family: var(--font-display); font-size: 16px; font-weight: 800; color: var(--gold-primary);">
