@@ -1,7 +1,7 @@
 {
   "name": "agent-egress-sentinel",
-  "version": "2.5.0",
-  "description": "Zero-dependency network traffic sniffer, domain classifier, and egress radar for AI agents and LLM runtimes.",
+  "version": "2.6.0",
+  "description": "Zero-dependency network traffic sniffer, domain classifier, SSRF guard, and egress radar for AI agents and LLM runtimes.",
   "main": "public/radar_engine.js",
   "homepage": "https://zoth.nullai.tech/tools/agent-egress-sentinel",
   "repository": {
@@ -11,7 +11,6 @@
   "scripts": {
     "start": "python3 server.py --web-port 8095 --proxy-port 8195",
     "serve": "python3 server.py --web-port 8095 --proxy-port 8195",
-    "serve:public": "python3 -m http.server 8095 --directory public",
     "test": "PYTHONPATH=src python3 -m pytest -q tests/",
     "test:ui": "python3 scripts/verify_ui.py"
   },
@@ -22,6 +21,6 @@
     "radar",
     "nullai"
   ],
-  "author": "1nc0gn30 (@1nc0gn30) • NullAI",
+  "author": "Neal Frazier Tech (@1nc0gn30) • NullAI Platform",
   "license": "MIT"
 }

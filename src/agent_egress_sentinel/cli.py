@@ -7,6 +7,7 @@ and Telemetry Radar for AI Agents and LLM Runtimes.
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import logging
 import os
@@ -14,17 +15,18 @@ import sys
 import time
 from typing import List, Optional
 
+from . import __version__
 from .collector import get_default_collector
+from .mcp_server import EgressMCPServer
 from .process_runner import AgentProcessRunner
 from .proxy import EgressProxy
 from .rules_engine import RulesEngine
-from .server import run_server
+from .server import get_or_create_api_token, run_server
 
 
 def _default_bind_host() -> str:
     """Bind address: localhost unless explicitly opted in via $ZOTH_BIND_HOST or
     $HOST (IP literal only; zsh sets HOST to the hostname) or --host."""
-    import ipaddress, os
     for var in ("ZOTH_BIND_HOST", "HOST"):
         val = os.environ.get(var, "").strip()
         if val == "localhost":
@@ -36,7 +38,6 @@ def _default_bind_host() -> str:
             except ValueError:
                 pass
     return "127.0.0.1"
-
 
 
 def setup_logging(verbose: bool = False) -> None:
@@ -54,8 +55,8 @@ def cmd_serve(args: argparse.Namespace) -> int:
     rules = RulesEngine(quarantine_mode=args.quarantine)
 
     print("\n" + "=" * 60)
-    print("  🛡️  AGENT EGRESS SENTINEL — ACTIVE DEFENSE & RADAR")
-    print("  Engineered by 1nc0gn30 (@1nc0gn30)")
+    print(f"  AGENT EGRESS SENTINEL v{__version__} — ACTIVE DEFENSE & RADAR")
+    print("  Engineered by Neal Frazier Tech (@1nc0gn30) • NullAI Platform")
     print("=" * 60)
     print(f"  • Web Radar Dashboard: http://{args.web_host}:{args.web_port}")
     print(f"  • Egress Proxy Tunnel: http://{args.proxy_host}:{args.proxy_port}")
@@ -84,17 +85,27 @@ def cmd_serve(args: argparse.Namespace) -> int:
 
 def cmd_run(args: argparse.Namespace) -> int:
     """Run an arbitrary AI agent command under sentinel proxy supervision."""
-    if not args.cmd:
+    cmd = list(args.cmd)
+    if cmd and cmd[0] == "--":
+        cmd = cmd[1:]
+    if not cmd:
         print("Error: No command specified to run. Usage: agent-egress run <command...>")
         return 1
 
     collector = get_default_collector()
     rules = RulesEngine(quarantine_mode=args.quarantine)
 
-    # Start local proxy instance if not already running on port
-    proxy = EgressProxy(host="127.0.0.1", port=args.proxy_port, collector=collector, rules_engine=rules, agent_name=args.agent_name)
+    proxy = EgressProxy(
+        host="127.0.0.1",
+        port=args.proxy_port,
+        collector=collector,
+        rules_engine=rules,
+        agent_name=args.agent_name,
+    )
+    started_local_proxy = False
     try:
         proxy.start()
+        started_local_proxy = True
     except OSError:
         # Port might already be used by existing sentinel serve daemon
         pass
@@ -106,28 +117,31 @@ def cmd_run(args: argparse.Namespace) -> int:
         rules=rules,
     )
 
-    print(f"\n[Sentinel] Launching agent process: {' '.join(args.cmd)}")
+    print(f"\n[Sentinel] Launching agent process: {' '.join(cmd)}")
     print(f"[Sentinel] Monitoring egress via proxy 127.0.0.1:{args.proxy_port} (Agent: {args.agent_name})...\n" + "-" * 60)
 
-    def _stream_out(line: str):
+    def _stream_out(line: str) -> None:
         sys.stdout.write(line)
         sys.stdout.flush()
 
-    def _stream_err(line: str):
+    def _stream_err(line: str) -> None:
         sys.stderr.write(line)
         sys.stderr.flush()
 
-    res = runner.run(
-        cmd=args.cmd,
-        agent_name=args.agent_name,
-        on_stdout=_stream_out,
-        on_stderr=_stream_err,
-    )
+    try:
+        res = runner.run(
+            cmd=cmd,
+            agent_name=args.agent_name,
+            on_stdout=_stream_out,
+            on_stderr=_stream_err,
+        )
+    finally:
+        if started_local_proxy:
+            proxy.stop()
 
     print("-" * 60)
     print(f"[Sentinel] Process finished with exit code {res['exit_code']} in {res['elapsed_seconds']}s")
 
-    # Domain summary
     domains = collector.get_domains()
     print(f"\n[Sentinel Audit] Captured {len(domains)} unique domain destinations:")
     for d in domains:
@@ -149,6 +163,7 @@ def cmd_stats(args: argparse.Namespace) -> int:
     live_health = None
     try:
         import urllib.request
+
         with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=2.0) as resp:
             live_health = json.loads(resp.read().decode("utf-8"))
     except Exception:
@@ -161,7 +176,7 @@ def cmd_stats(args: argparse.Namespace) -> int:
     if as_json:
         print(json.dumps({
             "service": "agent-egress-sentinel",
-            "version": "2.5.0",
+            "version": __version__,
             "online": live_health is not None,
             "web_port": port,
             "proxy_port": live_health.get("proxy_port", 8195) if live_health else 8195,
@@ -171,8 +186,9 @@ def cmd_stats(args: argparse.Namespace) -> int:
         }, indent=2))
         return 0
 
-    print("\n--- Agent Egress Sentinel Stats ---")
+    print(f"\n--- Agent Egress Sentinel v{__version__} Stats ---")
     print(f"Daemon Status:     {'ONLINE' if live_health else 'OFFLINE'} (http://127.0.0.1:{port})")
+    print(f"Proxy Port:        {live_health.get('proxy_port', 8195) if live_health else 8195}")
     print(f"Total Requests:    {live_health.get('total_requests', stats.get('total_requests', 0)) if live_health else stats.get('total_requests', 0)}")
     print(f"Total Domains:     {live_health.get('total_domains', stats.get('total_domains', 0)) if live_health else stats.get('total_domains', 0)}")
     print(f"Total Agents:      {stats.get('total_agents', 0)}")
@@ -215,13 +231,28 @@ def cmd_clear(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_token(args: argparse.Namespace) -> int:
+    token = get_or_create_api_token()
+    if getattr(args, "json", False):
+        print(json.dumps({"service": "agent-egress-sentinel", "version": __version__, "token": token}, indent=2))
+    else:
+        print(token)
+    return 0
+
+
+def cmd_mcp(args: argparse.Namespace) -> int:
+    port = getattr(args, "port", 8095)
+    srv = EgressMCPServer(base_url=f"http://127.0.0.1:{port}")
+    return srv.serve_stdio()
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         prog="agent-egress",
-        description="Agent Egress Sentinel — Network Traffic Sniffer & Endpoint Monitor for AI Agents",
+        description=f"Agent Egress Sentinel v{__version__} — Network Traffic Sniffer & Endpoint Monitor for AI Agents",
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose debug logging")
-    parser.add_argument("--version", action="version", version="agent-egress-sentinel 2.5.0")
+    parser.add_argument("--version", action="version", version=f"agent-egress-sentinel {__version__}")
     parser.add_argument("--status", action="store_true", help="Display egress daemon status and summary stats")
     parser.add_argument("--json", action="store_true", help="Emit telemetry in structured JSON format")
     parser.add_argument("--port", type=int, default=8095, help="Web UI port (default: 8095)")
@@ -229,7 +260,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # serve command
     p_serve = subparsers.add_parser("serve", help="Start radar web dashboard and egress proxy daemon")
-    p_serve.add_argument("--web-host", default=_default_bind_host(), help="Host interface (default: 127.0.0.1 or $ZOTH_BIND_HOST; use 0.0.0.0 only on trusted networks)")
+    p_serve.add_argument("--web-host", default=_default_bind_host(), help="Host interface (default: 127.0.0.1 or $ZOTH_BIND_HOST)")
     p_serve.add_argument("--web-port", type=int, default=8095, help="Web UI port (default: 8095)")
     p_serve.add_argument("--proxy-host", default="127.0.0.1", help="Proxy listen host (default: 127.0.0.1)")
     p_serve.add_argument("--proxy-port", type=int, default=8195, help="Proxy listen port (default: 8195)")
@@ -253,12 +284,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_run.add_argument("--export-har", help="Path to export HAR log after command finishes")
     p_run.add_argument("cmd", nargs=argparse.REMAINDER, help="Command and arguments to execute")
 
-    # stats command
+    # stats / status commands
     p_stats = subparsers.add_parser("stats", help="Display summary stats of captured traffic")
     p_stats.add_argument("--port", type=int, default=8095, help="Web UI port (default: 8095)")
     p_stats.add_argument("--json", action="store_true", help="Emit telemetry in structured JSON format")
 
-    # status alias
     p_status = subparsers.add_parser("status", help="Display egress daemon status and summary stats")
     p_status.add_argument("--port", type=int, default=8095, help="Web UI port (default: 8095)")
     p_status.add_argument("--json", action="store_true", help="Emit telemetry in structured JSON format")
@@ -274,24 +304,38 @@ def main(argv: Optional[List[str]] = None) -> int:
     # clear command
     subparsers.add_parser("clear", help="Clear captured traffic database")
 
+    # token command
+    p_token = subparsers.add_parser("token", help="Print the local 0600 API token required by POST /api/run")
+    p_token.add_argument("--json", action="store_true", help="Emit token as JSON")
+
+    # mcp command
+    p_mcp = subparsers.add_parser("mcp", help="Run zero-dependency JSON-RPC 2.0 stdio MCP server")
+    p_mcp.add_argument("--port", type=int, default=8095, help="Live daemon web port (default: 8095)")
+
     args = parser.parse_args(argv)
-    setup_logging(args.verbose)
+    if args.command != "mcp":
+        setup_logging(args.verbose)
 
     if getattr(args, "status", False) or (getattr(args, "json", False) and not args.command):
         return cmd_stats(args)
 
     if args.command == "serve":
         return cmd_serve(args)
-    elif args.command == "run":
+    if args.command == "run":
         return cmd_run(args)
-    elif args.command in ("stats", "status"):
+    if args.command in ("stats", "status"):
         return cmd_stats(args)
-    elif args.command == "export":
+    if args.command == "export":
         return cmd_export(args)
-    elif args.command == "openapi":
+    if args.command == "openapi":
         return cmd_openapi(args)
-    elif args.command == "clear":
+    if args.command == "clear":
         return cmd_clear(args)
+    if args.command == "token":
+        return cmd_token(args)
+    if args.command == "mcp":
+        return cmd_mcp(args)
+
     parser.print_help()
     return 0
 

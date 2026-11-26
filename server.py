@@ -7,7 +7,6 @@ Zero-dependency Python 3 HTTP Server & HTTP/HTTPS Proxy.
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 import time
 from pathlib import Path
@@ -17,12 +16,14 @@ SRC_DIR = BASE_DIR / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from agent_egress_sentinel import __version__
 from agent_egress_sentinel.collector import get_default_collector
 from agent_egress_sentinel.rules_engine import RulesEngine
 from agent_egress_sentinel.server import run_server
 
-def main():
-    parser = argparse.ArgumentParser(description="Agent Egress Sentinel Server")
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=f"Agent Egress Sentinel Server v{__version__}")
     parser.add_argument("--web-host", default="127.0.0.1", help="Web UI host (default: 127.0.0.1)")
     parser.add_argument("--web-port", "-p", "--port", dest="web_port", type=int, default=8095, help="Web UI port (default: 8095)")
     parser.add_argument("--proxy-host", default="127.0.0.1", help="Proxy listen host (default: 127.0.0.1)")
@@ -34,8 +35,8 @@ def main():
     rules = RulesEngine(quarantine_mode=args.quarantine)
 
     print("\n" + "=" * 60)
-    print("  🛡️  AGENT EGRESS SENTINEL — ACTIVE DEFENSE & RADAR")
-    print("  Engineered by 1nc0gn30 (@1nc0gn30) • NullAI Platform")
+    print(f"  AGENT EGRESS SENTINEL v{__version__} — ACTIVE DEFENSE & RADAR")
+    print("  Engineered by Neal Frazier Tech (@1nc0gn30) • NullAI Platform")
     print("=" * 60)
     print(f"  • Web Radar Dashboard: http://{args.web_host}:{args.web_port}")
     print(f"  • Egress Proxy Tunnel: http://{args.proxy_host}:{args.proxy_port}")
@@ -58,6 +59,7 @@ def main():
         print("\nStopping Agent Egress Sentinel...")
         proxy.stop()
         server.shutdown()
+
 
 if __name__ == "__main__":
     main()

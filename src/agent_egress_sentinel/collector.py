@@ -1,6 +1,7 @@
 """Egress Collector and Storage Engine for AI Agent Traffic.
 
-Thread-safe memory ring-buffer and SQLite WAL backing store.
+Thread-safe memory ring-buffer and SQLite WAL backing store with thread-local
+connection reuse and bounded opt-in Neuro-Memory sync queue.
 Zero external dependencies (pure Python standard library).
 """
 
@@ -8,7 +9,9 @@ from __future__ import annotations
 
 import contextlib
 import json
+import logging
 import os
+import queue
 import sqlite3
 import threading
 import time
@@ -16,6 +19,8 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional
+
+logger = logging.getLogger("agent_egress.collector")
 
 
 @dataclass
@@ -47,13 +52,24 @@ class NetworkEvent:
 
 
 class EgressCollector:
-    """Thread-safe collector and database for agent network observations."""
+    """Thread-safe collector and SQLite WAL database for agent network observations."""
 
-    def __init__(self, db_path: Optional[str] = None, max_ring_size: int = 2000, neuro_sync_enabled: bool = True):
+    def __init__(
+        self,
+        db_path: Optional[str] = None,
+        max_ring_size: int = 2000,
+        neuro_sync_enabled: Optional[bool] = None,
+    ):
         self.max_ring_size = max_ring_size
-        self.neuro_sync_enabled = neuro_sync_enabled
+        if neuro_sync_enabled is None:
+            self.neuro_sync_enabled = os.environ.get("EGRESS_NEURO_SYNC", "").strip() == "1"
+        else:
+            self.neuro_sync_enabled = bool(neuro_sync_enabled)
+
         self._events: List[NetworkEvent] = []
         self._lock = threading.RLock()
+        self._local = threading.local()
+        self._connections: List[sqlite3.Connection] = []
 
         if db_path is None:
             data_dir = Path.home() / ".agent_egress"
@@ -63,18 +79,65 @@ class EgressCollector:
             self.db_path = db_path
             Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
 
+        self._sync_queue: Optional[queue.Queue] = None
+        self._sync_worker: Optional[threading.Thread] = None
+        if self.neuro_sync_enabled:
+            self._start_sync_worker()
+
         self._init_db()
+
+    def _start_sync_worker(self) -> None:
+        self._sync_queue = queue.Queue(maxsize=256)
+
+        def _worker() -> None:
+            import urllib.request
+
+            while True:
+                item = self._sync_queue.get()
+                if item is None:
+                    self._sync_queue.task_done()
+                    break
+                try:
+                    payload = json.dumps(item).encode("utf-8")
+                    req = urllib.request.Request(
+                        "http://127.0.0.1:8094/api/memories",
+                        data=payload,
+                        headers={"Content-Type": "application/json"},
+                    )
+                    with urllib.request.urlopen(req, timeout=1.0):
+                        pass
+                except Exception as exc:
+                    logger.debug("Neuro-memory sync skipped: %s", exc)
+                finally:
+                    self._sync_queue.task_done()
+
+        self._sync_worker = threading.Thread(target=_worker, daemon=True, name="EgressNeuroSync")
+        self._sync_worker.start()
 
     @contextlib.contextmanager
     def _get_connection(self) -> Iterator[sqlite3.Connection]:
-        conn = sqlite3.connect(self.db_path, timeout=10.0, check_same_thread=False)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL;")
-        conn.execute("PRAGMA synchronous=NORMAL;")
-        try:
-            yield conn
-        finally:
-            conn.close()
+        conn: Optional[sqlite3.Connection] = getattr(self._local, "conn", None)
+        if conn is None or getattr(self._local, "db_path", None) != self.db_path:
+            conn = sqlite3.connect(self.db_path, timeout=10.0, check_same_thread=False)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA journal_mode=WAL;")
+            conn.execute("PRAGMA synchronous=NORMAL;")
+            self._local.conn = conn
+            self._local.db_path = self.db_path
+            with self._lock:
+                self._connections.append(conn)
+        yield conn
+
+    def close(self) -> None:
+        """Close all cached SQLite connections."""
+        with self._lock:
+            for conn in self._connections:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+            self._connections.clear()
+            self._local = threading.local()
 
     def _init_db(self) -> None:
         with self._lock:
@@ -149,8 +212,8 @@ class EgressCollector:
                         event.notes,
                     ))
                     conn.commit()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to persist egress event %s to SQLite: %s", event.id, exc)
 
         self.sync_to_neuro_memory(event)
         return event
@@ -164,6 +227,8 @@ class EgressCollector:
         offset: int = 0,
     ) -> List[Dict[str, Any]]:
         """Retrieve historical events with filtering."""
+        safe_limit = max(1, min(int(limit), 500))
+        safe_offset = max(0, int(offset))
         with self._lock:
             with self._get_connection() as conn:
                 clauses = []
@@ -185,7 +250,7 @@ class EgressCollector:
                     ORDER BY timestamp DESC
                     LIMIT ? OFFSET ?;
                 """
-                params.extend([limit, offset])
+                params.extend([safe_limit, safe_offset])
                 cursor = conn.execute(query, params)
                 rows = cursor.fetchall()
 
@@ -241,6 +306,8 @@ class EgressCollector:
 
     def export_har(self) -> Dict[str, Any]:
         """Export captured traffic in standard HTTP Archive (HAR 1.2) format."""
+        from . import __version__
+
         events = self.get_events(limit=500)
         entries = []
         for e in events:
@@ -266,7 +333,7 @@ class EgressCollector:
                 },
                 "response": {
                     "status": e["status_code"],
-                    "statusText": "OK" if e["status_code"] == 200 else "Captured",
+                    "statusText": "Quarantined" if e.get("quarantined") else ("OK" if e["status_code"] == 200 else "Captured"),
                     "httpVersion": "HTTP/1.1",
                     "headers": [{"name": "Content-Type", "value": e["content_type"]}],
                     "content": {"size": e["bytes_recv"], "mimeType": e["content_type"], "text": e["response_sample"]},
@@ -281,13 +348,15 @@ class EgressCollector:
         return {
             "log": {
                 "version": "1.2",
-                "creator": {"name": "Agent Egress Sentinel", "version": "0.1.0"},
+                "creator": {"name": "Agent Egress Sentinel", "version": __version__},
                 "entries": entries,
             }
         }
 
     def export_openapi(self) -> Dict[str, Any]:
         """Synthesize an OpenAPI 3.0 specification from captured agent traffic."""
+        from . import __version__
+
         events = self.get_events(limit=500)
         paths: Dict[str, Any] = {}
         servers_set = set()
@@ -359,40 +428,33 @@ class EgressCollector:
             "openapi": "3.0.3",
             "info": {
                 "title": "Agent Egress Sentinel — Synthesized API Blueprint",
-                "version": "1.0.0",
+                "version": __version__,
                 "description": "Reverse-engineered OpenAPI specification synthesized directly from AI agent network traffic.",
-                "contact": {"name": "1nc0gn30 • NullAI", "url": "https://nullai.tech"},
+                "contact": {"name": "Neal Frazier Tech (@1nc0gn30) • NullAI Platform", "url": "https://nullai.tech"},
             },
-            "servers": [{"url": s} for s in sorted(list(servers_set))] or [{"url": "https://api.openai.com"}],
+            "servers": [{"url": s} for s in sorted(servers_set)] or [{"url": "https://api.openai.com"}],
             "paths": paths,
         }
 
     def sync_to_neuro_memory(self, event: NetworkEvent) -> None:
-        """Forward captured egress as an episodic memory to Neuro-Memory Daemon."""
-        if not self.neuro_sync_enabled:
+        """Enqueue captured egress to bounded opt-in Neuro-Memory sync worker."""
+        if not self.neuro_sync_enabled or self._sync_queue is None:
             return
-
-        def _post():
-            try:
-                import urllib.request
-                payload = json.dumps({
-                    "text": f"Agent '{event.agent_name}' egress to {event.domain} ({event.category}): {event.method} {event.url_path} [{event.status_code}], {event.bytes_sent}B sent, {event.bytes_recv}B recv, {round(event.latency_ms, 1)}ms latency.",
-                    "source": "agent-egress-sentinel",
-                    "category": "network_egress",
-                    "importance": 0.8 if event.quarantined else 0.5,
-                    "tags": ["egress", event.category, event.domain, "quarantined" if event.quarantined else "permitted"],
-                }).encode("utf-8")
-                req = urllib.request.Request(
-                    "http://127.0.0.1:8094/api/memories",
-                    data=payload,
-                    headers={"Content-Type": "application/json"},
-                )
-                urllib.request.urlopen(req, timeout=1.0)
-            except Exception:
-                pass
-
-        t = threading.Thread(target=_post, daemon=True)
-        t.start()
+        payload = {
+            "text": (
+                f"Agent '{event.agent_name}' egress to {event.domain} ({event.category}): "
+                f"{event.method} {event.url_path} [{event.status_code}], "
+                f"{event.bytes_sent}B sent, {event.bytes_recv}B recv, {round(event.latency_ms, 1)}ms latency."
+            ),
+            "source": "agent-egress-sentinel",
+            "category": "network_egress",
+            "importance": 0.8 if event.quarantined else 0.5,
+            "tags": ["egress", event.category, event.domain, "quarantined" if event.quarantined else "permitted"],
+        }
+        try:
+            self._sync_queue.put_nowait(payload)
+        except queue.Full:
+            logger.debug("Neuro-memory sync queue full; dropping event %s", event.id)
 
     def clear(self) -> None:
         """Clear all logged events."""
@@ -404,10 +466,13 @@ class EgressCollector:
 
 
 _DEFAULT_COLLECTOR: Optional[EgressCollector] = None
+_COLLECTOR_LOCK = threading.Lock()
 
 
 def get_default_collector() -> EgressCollector:
     global _DEFAULT_COLLECTOR
     if _DEFAULT_COLLECTOR is None:
-        _DEFAULT_COLLECTOR = EgressCollector()
+        with _COLLECTOR_LOCK:
+            if _DEFAULT_COLLECTOR is None:
+                _DEFAULT_COLLECTOR = EgressCollector()
     return _DEFAULT_COLLECTOR

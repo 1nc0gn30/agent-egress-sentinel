@@ -1,60 +1,194 @@
 #!/usr/bin/env python3
-"""⚡ Agent Egress Sentinel — Sovereign Unicode U+2800 Braille TUI & Benchmark Harness
-Engineered by 1nc0gn30 (@1nc0gn30) • NullAI Platform
-Paired Uncommon-Web Library: Canvas UI (canvasui-html-effects)
+"""Agent Egress Sentinel v2.6.0 — Live Terminal Radar TUI.
+
+Queries the live local daemon (:8095/health, /api/stats, /api/domains, /api/rules)
+with graceful SQLite fallback when the daemon is offline.
+Zero external dependencies (100% Python standard library).
+Engineered by Neal Frazier Tech (@1nc0gn30) • NullAI Platform
 """
-import argparse, json, math, os, sys, time
 
-BRAILLE_BASE = 0x2800
-METRICS = ["AST/Engine Latency (ms)", "Throughput (ops/s)", "Memory Footprint (MB)", "Zero-Trust Audit Status"]
-SUMMARY = "Sovereign Agent Egress Sentinel engine with deterministic local execution and real-time telemetry."
-UW_SLUG = "canvasui-html-effects"
-UW_INSTALL = "npx shadcn@latest add https://canvasui.dev/r/liquid-react.json https://canvasui.dev/r/shatter-react.json https://canvasui.dev/r/peel-react.json https://canvasui.dev/r/ripple-react.json https://canvasui.dev/r/cloth-react.json https://canvasui.dev/r/vhs-react.json"
+from __future__ import annotations
 
-def braille_sparkline(vals):
-    out = []
-    for i in range(0, len(vals) - 1, 2):
-        v1 = max(0, min(3, int(vals[i] * 3.99)))
-        v2 = max(0, min(3, int(vals[i+1] * 3.99)))
-        dots1 = (0x40, 0x04, 0x02, 0x01)[v1]
-        dots2 = (0x80, 0x20, 0x10, 0x08)[v2]
-        out.append(chr(BRAILLE_BASE | dots1 | dots2))
-    return "".join(out)
+import argparse
+import json
+import os
+import sys
+import time
+import urllib.request
+from typing import Any, Dict, List, Optional, Tuple
 
-def main():
-    ap = argparse.ArgumentParser(description="Agent Egress Sentinel Sovereign TUI & Benchmark")
-    ap.add_argument("--json", action="store_true", help="Output JSON telemetry and exit")
-    ap.add_argument("--benchmark", action="store_true", help="Run deterministic latency benchmark")
-    ap.add_argument("--frames", type=int, default=18, help="TUI frames to render")
+VERSION = "2.6.0"
+
+# Ensure local package importable for SQLite offline fallback
+for _candidate in (
+    os.path.expanduser("~/NullAITech/agent-egress-sentinel/src"),
+    "/opt/agent-egress-sentinel/src",
+):
+    if os.path.isdir(_candidate) and _candidate not in sys.path:
+        sys.path.insert(0, _candidate)
+        break
+
+
+def _fetch_json(base_url: str, path: str, timeout: float = 1.5) -> Optional[Dict[str, Any]]:
+    try:
+        req = urllib.request.Request(
+            f"{base_url}{path}",
+            headers={"User-Agent": f"agent-egress-sentinel-tui/{VERSION}"},
+        )
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            if resp.status == 200:
+                return json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        pass
+    return None
+
+
+def _format_bytes(num: int) -> str:
+    val = float(max(0, int(num or 0)))
+    for unit in ("B", "KB", "MB", "GB"):
+        if val < 1024.0 or unit == "GB":
+            return f"{val:.1f} {unit}" if unit != "B" else f"{int(val)} B"
+        val /= 1024.0
+    return f"{int(num)} B"
+
+
+def collect_snapshot(port: int = 8095) -> Dict[str, Any]:
+    base_url = f"http://127.0.0.1:{port}"
+    health = _fetch_json(base_url, "/health")
+    if health and health.get("status") == "ok":
+        stats = _fetch_json(base_url, "/api/stats") or {}
+        domains_resp = _fetch_json(base_url, "/api/domains") or {}
+        rules = _fetch_json(base_url, "/api/rules") or {}
+        return {
+            "service": "agent-egress-sentinel",
+            "version": health.get("version", VERSION),
+            "source": "live_daemon",
+            "online": True,
+            "web_port": health.get("web_port", port),
+            "proxy_port": health.get("proxy_port", 8195),
+            "proxy_running": bool(health.get("proxy_running", False)),
+            "quarantine_mode": rules.get("quarantine_mode", health.get("quarantine_mode", "allow_all")),
+            "stats": {
+                "total_requests": int(stats.get("total_requests", health.get("total_requests", 0))),
+                "total_domains": int(stats.get("total_domains", health.get("total_domains", 0))),
+                "total_agents": int(stats.get("total_agents", 0)),
+                "total_bytes_sent": int(stats.get("total_bytes_sent", 0)),
+                "total_bytes_recv": int(stats.get("total_bytes_recv", 0)),
+                "avg_latency_ms": round(float(stats.get("avg_latency_ms", 0.0)), 1),
+                "total_quarantined": int(stats.get("total_quarantined", health.get("total_quarantined", 0))),
+            },
+            "rules": {
+                "allowed_domains": rules.get("allowed_domains", []),
+                "blocked_domains": rules.get("blocked_domains", []),
+                "protected_ports": rules.get("protected_ports", [port, 8195]),
+            },
+            "domains": domains_resp.get("domains", []),
+        }
+
+    # Offline fallback: inspect local SQLite collector directly
+    stats = {}
+    domains: List[Dict[str, Any]] = []
+    try:
+        from agent_egress_sentinel.collector import get_default_collector
+
+        col = get_default_collector()
+        stats = col.get_stats()
+        domains = col.get_domains()
+    except Exception:
+        pass
+
+    return {
+        "service": "agent-egress-sentinel",
+        "version": VERSION,
+        "source": "sqlite_offline_fallback",
+        "online": False,
+        "web_port": port,
+        "proxy_port": 8195,
+        "proxy_running": False,
+        "quarantine_mode": "offline",
+        "stats": {
+            "total_requests": int(stats.get("total_requests", 0)),
+            "total_domains": int(stats.get("total_domains", 0)),
+            "total_agents": int(stats.get("total_agents", 0)),
+            "total_bytes_sent": int(stats.get("total_bytes_sent", 0)),
+            "total_bytes_recv": int(stats.get("total_bytes_recv", 0)),
+            "avg_latency_ms": round(float(stats.get("avg_latency_ms", 0.0)), 1),
+            "total_quarantined": int(stats.get("total_quarantined", 0)),
+        },
+        "rules": {
+            "allowed_domains": [],
+            "blocked_domains": [],
+            "protected_ports": [port, 8195],
+        },
+        "domains": domains,
+    }
+
+
+def render_frame(snap: Dict[str, Any]) -> str:
+    st = snap["stats"]
+    rules = snap["rules"]
+    status_str = "\033[1;32mONLINE\033[0m" if snap["online"] else "\033[1;33mOFFLINE (SQLite Fallback)\033[0m"
+    total_bytes = _format_bytes(st["total_bytes_sent"] + st["total_bytes_recv"])
+    ts = time.strftime("%H:%M:%S")
+
+    lines = [
+        "\033[1;33m╭──────────────────────────────────────────────────────────────────────────────╮\033[0m",
+        f"\033[1;33m│\033[0m  \033[1;37mAGENT EGRESS SENTINEL v{snap['version']}\033[0m  │  Web :{snap['web_port']}  Proxy :{snap['proxy_port']}  │  {ts}   \033[1;33m│\033[0m",
+        "\033[1;33m├──────────────────────────────────────────────────────────────────────────────┤\033[0m",
+        f"\033[1;33m│\033[0m  Daemon: {status_str}   Policy: \033[1;36m{str(snap['quarantine_mode']).upper()}\033[0m",
+        f"\033[1;33m│\033[0m  Requests: {st['total_requests']:<7} Domains: {st['total_domains']:<5} Quarantined: {st['total_quarantined']:<6} Volume: {total_bytes}",
+        f"\033[1;33m│\033[0m  Avg Latency: {st['avg_latency_ms']:.1f} ms   Allowlist: {len(rules['allowed_domains'])}   Blocklist: {len(rules['blocked_domains'])}   Protected: {rules['protected_ports']}",
+        "\033[1;33m├──────────────────────────────────────────────────────────────────────────────┤\033[0m",
+        "\033[1;33m│\033[0m  TOP OBSERVED DOMAINS:",
+    ]
+
+    domains = snap.get("domains") or []
+    if not domains:
+        lines.append("\033[1;33m│\033[0m    (no captured domains yet — route HTTP_PROXY=http://127.0.0.1:8195)")
+    else:
+        for d in domains[:10]:
+            dom = str(d.get("domain", ""))[:32]
+            cat = str(d.get("category", "unknown"))[:16]
+            reqs = int(d.get("request_count", 0))
+            q_cnt = int(d.get("quarantined_count", 0))
+            vol = _format_bytes(int(d.get("total_bytes_sent", 0)) + int(d.get("total_bytes_recv", 0)))
+            flag = "\033[1;31mBLOCK\033[0m" if q_cnt > 0 else "\033[1;32mALLOW\033[0m"
+            lines.append(f"\033[1;33m│\033[0m    {dom:<32} {cat:<16} {reqs:>4} reqs  {vol:>9}  {flag}")
+
+    lines.append("\033[1;33m├──────────────────────────────────────────────────────────────────────────────┤\033[0m")
+    lines.append("\033[1;33m│\033[0m  Engineered by Neal Frazier Tech (@1nc0gn30) • NullAI Platform               \033[1;33m│\033[0m")
+    lines.append("\033[1;33m╰──────────────────────────────────────────────────────────────────────────────╯\033[0m")
+    return "\n".join(lines)
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=f"Agent Egress Sentinel v{VERSION} Live Terminal Radar TUI")
+    ap.add_argument("--port", type=int, default=8095, help="Sentinel web daemon port (default: 8095)")
+    ap.add_argument("--once", action="store_true", help="Render a single live telemetry snapshot and exit")
+    ap.add_argument("--json", action="store_true", help="Emit live daemon/SQLite telemetry JSON and exit")
+    ap.add_argument("--interval", type=float, default=2.0, help="Refresh interval in seconds (default: 2.0)")
     args = ap.parse_args()
 
-    t0 = time.perf_counter()
-    samples = [0.5 + 0.45 * math.sin(i * 0.35) for i in range(48)]
-    elapsed_ms = round((time.perf_counter() - t0) * 1000.0 + 0.42, 3)
-
+    snap = collect_snapshot(port=args.port)
     if args.json:
-        print(json.dumps({
-            "tool": "agent-egress-sentinel",
-            "title": "Agent Egress Sentinel",
-            "architect": "1nc0gn30 (@1nc0gn30) • NullAI Platform",
-            "summary": SUMMARY,
-            "uncommon_web": {"slug": UW_SLUG, "install": UW_INSTALL},
-            "audio_lufs": -14.0,
-            "benchmark_ms": elapsed_ms,
-            "metrics": METRICS,
-            "braille_signature": braille_sparkline(samples),
-        }, indent=2))
-        return
+        print(json.dumps(snap, indent=2))
+        return 0
 
-    print("\033[1;33m╭──────────────────────────────────────────────────────────────────────────╮\033[0m")
-    print(f"\033[1;33m│\033[0m ⚡ \033[1;37mAgent Egress Sentinel           \033[0m │ \033[36m1nc0gn30 • NullAI Platform\033[0m         \033[1;33m│\033[0m")
-    print("\033[1;33m├──────────────────────────────────────────────────────────────────────────┤\033[0m")
-    print(f"\033[1;33m│\033[0m {SUMMARY[:72]:<72} \033[1;33m│\033[0m")
-    print(f"\033[1;33m│\033[0m Uncommon-Web: \033[32m{UW_SLUG:<24}\033[0m Audio: \033[35m-14.0 LUFS Mastered\033[0m   \033[1;33m│\033[0m")
-    for idx, m in enumerate(METRICS[:4]):
-        wave = braille_sparkline([0.5 + 0.45 * math.sin((i + idx * 3) * 0.4) for i in range(40)])
-        print(f"\033[1;33m│\033[0m  • {m[:24]:<24} \033[33m{wave}\033[0m  PASS   \033[1;33m│\033[0m")
-    print("\033[1;33m╰──────────────────────────────────────────────────────────────────────────╯\033[0m")
+    if args.once or not sys.stdout.isatty():
+        print(render_frame(snap))
+        return 0
+
+    try:
+        while True:
+            snap = collect_snapshot(port=args.port)
+            sys.stdout.write("\033[2J\033[H")
+            sys.stdout.write(render_frame(snap) + "\n")
+            sys.stdout.write("  Press Ctrl+C to exit live radar...\n")
+            sys.stdout.flush()
+            time.sleep(max(0.5, args.interval))
+    except KeyboardInterrupt:
+        return 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

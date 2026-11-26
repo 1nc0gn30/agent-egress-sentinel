@@ -1,8 +1,9 @@
 """Zero-Dependency Forward & CONNECT Egress Proxy for AI Agent Traffic.
 
-Captures all outbound HTTP and HTTPS connections from any AI runtime or model process.
-Parses TLS ClientHello SNI hostnames without breaking SSL encryption or requiring root CAs.
-Enforces quarantine policy in real-time and streams audit logs to EgressCollector.
+Captures outbound HTTP and HTTPS connections from any AI runtime or model process.
+Parses TLS ClientHello SNI hostnames without breaking SSL encryption or requiring root CAs,
+re-evaluates SNI against quarantine rules BEFORE relaying payload, enforces SSRF/private-net
+and control-plane protection, and streams audit logs to EgressCollector.
 100% Python Standard Library.
 """
 
@@ -14,6 +15,7 @@ import socket
 import struct
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Tuple
 from urllib.parse import urlparse
 
@@ -21,6 +23,51 @@ from .collector import EgressCollector, NetworkEvent, get_default_collector
 from .rules_engine import DomainCategory, RulesEngine
 
 logger = logging.getLogger("agent_egress.proxy")
+
+MAX_HTTP_REQUEST_BODY_BYTES = 10 * 1024 * 1024  # 10 MiB cap on forwarded HTTP bodies
+MAX_RESPONSE_PREVIEW_BYTES = 8192               # Bounded in-memory preview buffer
+MAX_CONCURRENT_CLIENTS = 64
+
+
+def parse_host_port(authority: str, default_port: int) -> Optional[Tuple[str, int]]:
+    """Safely parse host[:port] or [ipv6][:port] authority strings."""
+    raw = (authority or "").strip()
+    if not raw or any(ch in raw for ch in (" ", "\t", "\r", "\n", "/", "\\")):
+        return None
+
+    host = ""
+    port = default_port
+
+    if raw.startswith("["):
+        end = raw.find("]")
+        if end == -1:
+            return None
+        host = raw[1:end]
+        rest = raw[end + 1 :]
+        if rest:
+            if not rest.startswith(":"):
+                return None
+            port_str = rest[1:]
+            if not port_str.isdigit():
+                return None
+            port = int(port_str)
+    elif raw.count(":") == 1:
+        host_part, port_str = raw.split(":", 1)
+        if not host_part or not port_str.isdigit():
+            return None
+        host = host_part
+        port = int(port_str)
+    elif ":" in raw:
+        # Unbracketed IPv6 literal without port
+        host = raw
+        port = default_port
+    else:
+        host = raw
+        port = default_port
+
+    if not host or not (1 <= port <= 65535):
+        return None
+    return host, port
 
 
 def extract_sni_hostname(packet: bytes) -> Optional[str]:
@@ -30,44 +77,30 @@ def extract_sni_hostname(packet: bytes) -> Optional[str]:
     Returns hostname string if found, otherwise None.
     """
     try:
-        # TLS Record Header: 5 bytes
-        # Byte 0: ContentType (0x16 = Handshake)
-        # Bytes 1-2: Version
-        # Bytes 3-4: Length
         if len(packet) < 9 or packet[0] != 0x16:
             return None
-
-        # Byte 5: Handshake Type (0x01 = ClientHello)
         if packet[5] != 0x01:
             return None
 
-        # Skip record header (5 bytes) + Handshake Type (1) + Handshake Length (3) = 9 bytes
-        pos = 9
-
-        # Client Version (2 bytes) + Random (32 bytes) = 34 bytes
-        pos += 34
+        pos = 9 + 34  # record(5) + hs_type(1) + hs_len(3) + version(2) + random(32)
         if pos >= len(packet):
             return None
 
-        # Session ID length (1 byte)
         session_id_len = packet[pos]
         pos += 1 + session_id_len
         if pos + 2 > len(packet):
             return None
 
-        # Cipher Suites length (2 bytes)
         cipher_suites_len = struct.unpack("!H", packet[pos : pos + 2])[0]
         pos += 2 + cipher_suites_len
         if pos + 1 > len(packet):
             return None
 
-        # Compression Methods length (1 byte)
         compression_len = packet[pos]
         pos += 1 + compression_len
         if pos + 2 > len(packet):
             return None
 
-        # Extensions length (2 bytes)
         extensions_len = struct.unpack("!H", packet[pos : pos + 2])[0]
         pos += 2
         extensions_end = pos + extensions_len
@@ -78,8 +111,6 @@ def extract_sni_hostname(packet: bytes) -> Optional[str]:
 
             if ext_type == 0x0000:  # server_name extension
                 if pos + 2 <= len(packet):
-                    # server_name_list length
-                    list_len = struct.unpack("!H", packet[pos : pos + 2])[0]
                     sub_pos = pos + 2
                     if sub_pos + 3 <= pos + ext_len:
                         name_type = packet[sub_pos]
@@ -96,7 +127,7 @@ def extract_sni_hostname(packet: bytes) -> Optional[str]:
 
 
 class EgressProxy:
-    """Thread-safe forward and CONNECT proxy server."""
+    """Thread-safe forward HTTP and HTTPS CONNECT proxy server with SNI & SSRF enforcement."""
 
     def __init__(
         self,
@@ -105,6 +136,7 @@ class EgressProxy:
         collector: Optional[EgressCollector] = None,
         rules_engine: Optional[RulesEngine] = None,
         agent_name: str = "ai_agent",
+        web_port: Optional[int] = None,
     ):
         self.host = host
         self.port = port
@@ -112,8 +144,14 @@ class EgressProxy:
         self.rules = rules_engine or RulesEngine()
         self.agent_name = agent_name
 
+        # Always protect proxy port and optional web control port against self-escape
+        self.rules.register_protected_ports(self.port)
+        if web_port is not None:
+            self.rules.register_protected_ports(web_port)
+
         self._server_socket: Optional[socket.socket] = None
         self._thread: Optional[threading.Thread] = None
+        self._executor: Optional[ThreadPoolExecutor] = None
         self._running = False
         self._lock = threading.Lock()
 
@@ -128,7 +166,13 @@ class EgressProxy:
             self._server_socket.bind((self.host, self.port))
             self._server_socket.listen(128)
             self._server_socket.settimeout(1.0)
+            self.port = self._server_socket.getsockname()[1]
+            self.rules.register_protected_ports(self.port)
             self._running = True
+            self._executor = ThreadPoolExecutor(
+                max_workers=MAX_CONCURRENT_CLIENTS,
+                thread_name_prefix="EgressProxyClient",
+            )
 
             self._thread = threading.Thread(target=self._accept_loop, daemon=True, name="EgressProxyThread")
             self._thread.start()
@@ -144,9 +188,13 @@ class EgressProxy:
                 except Exception:
                     pass
                 self._server_socket = None
+            executor = self._executor
+            self._executor = None
 
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=2.0)
+        if executor is not None:
+            executor.shutdown(wait=False, cancel_futures=True)
 
     @property
     def is_running(self) -> bool:
@@ -163,20 +211,70 @@ class EgressProxy:
                     logger.debug("Accept error: %s", e)
                 break
 
-            client_thread = threading.Thread(
-                target=self._handle_client,
-                args=(client_sock, client_addr),
-                daemon=True,
-            )
-            client_thread.start()
+            executor = self._executor
+            if executor is not None and self._running:
+                try:
+                    executor.submit(self._handle_client, client_sock, client_addr)
+                except RuntimeError:
+                    client_sock.close()
+            else:
+                client_sock.close()
+
+    def _send_simple_response(self, client_sock: socket.socket, status_line: str, body: str, extra_headers: str = "") -> None:
+        encoded = body.encode("utf-8")
+        resp = (
+            f"HTTP/1.1 {status_line}\r\n"
+            f"Content-Type: text/plain; charset=utf-8\r\n"
+            f"Content-Length: {len(encoded)}\r\n"
+            f"{extra_headers}"
+            f"Connection: close\r\n\r\n"
+        ).encode("ascii") + encoded
+        try:
+            client_sock.sendall(resp)
+        except Exception:
+            pass
+
+    def _resolve_and_validate_target(self, target_host: str, target_port: int) -> Tuple[Optional[Tuple[int, str]], Optional[str], bool]:
+        """Resolve DNS and verify EVERY returned IP against RulesEngine (DNS pinning / SSRF guard).
+
+        Returns:
+            ((family, pinned_ip) or None, error_message_or_none, is_policy_block)
+        """
+        try:
+            infos = socket.getaddrinfo(target_host, target_port, type=socket.SOCK_STREAM)
+        except socket.gaierror as exc:
+            return None, f"DNS resolution failed for {target_host}: {exc}", False
+
+        if not infos:
+            return None, f"No addresses resolved for {target_host}", False
+
+        first_candidate: Optional[Tuple[int, str]] = None
+        for family, _socktype, _proto, _canon, sockaddr in infos:
+            ip_str = sockaddr[0]
+            allowed, reason = self.rules.is_allowed(target_host, target_port, resolved_ip=ip_str)
+            if not allowed:
+                return None, reason, True
+            if first_candidate is None:
+                first_candidate = (family, ip_str)
+
+        return first_candidate, None, False
+
+    def _connect_pinned(self, family: int, ip_str: str, port: int, timeout: float = 10.0) -> socket.socket:
+        sock = socket.socket(family, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        try:
+            sock.connect((ip_str, port))
+            return sock
+        except Exception:
+            sock.close()
+            raise
 
     def _handle_client(self, client_sock: socket.socket, client_addr: Tuple[str, int]) -> None:
         start_time = time.time()
         client_sock.settimeout(15.0)
-        client_ip, client_port = client_addr
+        client_ip, _client_port = client_addr
 
         try:
-            # Read initial request header
             initial_data = b""
             while b"\r\n\r\n" not in initial_data:
                 chunk = client_sock.recv(4096)
@@ -184,28 +282,26 @@ class EgressProxy:
                     break
                 initial_data += chunk
                 if len(initial_data) > 65536:
-                    break
+                    self._send_simple_response(client_sock, "431 Request Header Fields Too Large", "Request headers too large.\n")
+                    return
 
             if not initial_data:
-                client_sock.close()
                 return
 
-            header_part, _, remaining_data = initial_data.partition(b"\r\n\r\n")
+            header_part, _, _remaining = initial_data.partition(b"\r\n\r\n")
             lines = header_part.decode("iso-8859-1", errors="replace").split("\r\n")
             if not lines:
-                client_sock.close()
                 return
 
             request_line = lines[0].strip()
             parts = request_line.split(" ")
             if len(parts) < 2:
-                client_sock.close()
+                self._send_simple_response(client_sock, "400 Bad Request", "Malformed HTTP request line.\n")
                 return
 
             method = parts[0].upper()
             target_uri = parts[1]
 
-            # Parse headers
             headers = {}
             for line in lines[1:]:
                 if ":" in line:
@@ -243,6 +339,40 @@ class EgressProxy:
             except Exception:
                 pass
 
+    def _record_quarantined(
+        self,
+        agent_name: str,
+        domain: str,
+        remote_ip: str,
+        remote_port: int,
+        protocol: str,
+        method: str,
+        url_path: str,
+        bytes_sent: int,
+        headers: dict,
+        reason: str,
+        start_time: float,
+    ) -> None:
+        category = self.rules.classify(domain, remote_port)
+        self.collector.record(NetworkEvent(
+            agent_name=agent_name,
+            domain=domain,
+            remote_ip=remote_ip,
+            remote_port=remote_port,
+            protocol=protocol,
+            method=method,
+            url_path=url_path,
+            status_code=403,
+            bytes_sent=bytes_sent,
+            bytes_recv=0,
+            latency_ms=(time.time() - start_time) * 1000.0,
+            content_type="text/plain",
+            headers=headers,
+            category=category.value if isinstance(category, DomainCategory) else str(category),
+            quarantined=True,
+            notes=f"Quarantined by policy: {reason}",
+        ))
+
     def _handle_connect(
         self,
         client_sock: socket.socket,
@@ -252,39 +382,23 @@ class EgressProxy:
         agent_name: str,
         start_time: float,
     ) -> None:
-        """Handle HTTPS CONNECT tunneling."""
-        if ":" in target_uri:
-            target_host, port_str = target_uri.split(":", 1)
-            try:
-                target_port = int(port_str)
-            except ValueError:
-                target_port = 443
-        else:
-            target_host = target_uri
-            target_port = 443
+        """Handle HTTPS CONNECT tunneling with DNS-pinned SSRF check and pre-relay SNI re-evaluation."""
+        parsed_hp = parse_host_port(target_uri, 443)
+        if parsed_hp is None:
+            self._send_simple_response(client_sock, "400 Bad Request", "Invalid CONNECT target authority.\n")
+            return
+        target_host, target_port = parsed_hp
 
-        # Policy Quarantine Check
+        # 1. Hostname / literal IP policy check
         allowed, reason = self.rules.is_allowed(target_host, target_port)
-        category = self.rules.classify(target_host, target_port)
-
         if not allowed:
-            # Block and return 403 Forbidden
-            err_body = f"Forbidden: Outbound connection to {target_host}:{target_port} blocked by Agent Egress Sentinel.\nReason: {reason}\n"
-            resp = (
-                f"HTTP/1.1 403 Forbidden\r\n"
-                f"Content-Type: text/plain\r\n"
-                f"Content-Length: {len(err_body.encode('utf-8'))}\r\n"
-                f"X-Sentinel-Quarantine: 1\r\n"
-                f"Connection: close\r\n\r\n"
-                f"{err_body}"
+            self._send_simple_response(
+                client_sock,
+                "403 Forbidden",
+                f"Forbidden: Outbound connection to {target_host}:{target_port} blocked by Agent Egress Sentinel.\nReason: {reason}\n",
+                extra_headers="X-Sentinel-Quarantine: 1\r\n",
             )
-            try:
-                client_sock.sendall(resp.encode("utf-8"))
-            except Exception:
-                pass
-
-            # Record Quarantined Event
-            self.collector.record(NetworkEvent(
+            self._record_quarantined(
                 agent_name=agent_name,
                 domain=target_host,
                 remote_ip="0.0.0.0",
@@ -292,31 +406,47 @@ class EgressProxy:
                 protocol="HTTPS",
                 method="CONNECT",
                 url_path=f"tunnel://{target_host}:{target_port}",
-                status_code=403,
                 bytes_sent=0,
-                bytes_recv=0,
-                latency_ms=(time.time() - start_time) * 1000.0,
-                content_type="text/plain",
                 headers=headers,
-                category=category.value if isinstance(category, DomainCategory) else str(category),
-                quarantined=True,
-                notes=f"Quarantined by policy: {reason}",
-            ))
+                reason=reason,
+                start_time=start_time,
+            )
             return
 
-        # Attempt upstream connection
+        # 2. DNS resolution & resolved IP SSRF validation (pinned connect)
+        pinned, err_msg, is_policy_block = self._resolve_and_validate_target(target_host, target_port)
+        if pinned is None:
+            if is_policy_block:
+                self._send_simple_response(
+                    client_sock,
+                    "403 Forbidden",
+                    f"Forbidden: Resolved destination for {target_host}:{target_port} blocked.\nReason: {err_msg}\n",
+                    extra_headers="X-Sentinel-Quarantine: 1\r\n",
+                )
+                self._record_quarantined(
+                    agent_name=agent_name,
+                    domain=target_host,
+                    remote_ip="0.0.0.0",
+                    remote_port=target_port,
+                    protocol="HTTPS",
+                    method="CONNECT",
+                    url_path=f"tunnel://{target_host}:{target_port}",
+                    bytes_sent=0,
+                    headers=headers,
+                    reason=err_msg or "Policy blocked",
+                    start_time=start_time,
+                )
+            else:
+                self._send_simple_response(client_sock, "502 Bad Gateway", f"Sentinel Upstream Connect Failed: {err_msg}\n")
+            return
+
+        family, remote_ip = pinned
         try:
-            remote_sock = socket.create_connection((target_host, target_port), timeout=10.0)
-            remote_ip = remote_sock.getpeername()[0]
+            remote_sock = self._connect_pinned(family, remote_ip, target_port, timeout=10.0)
         except Exception as e:
-            err_msg = f"HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\nSentinel Upstream Connect Failed: {e}\n"
-            try:
-                client_sock.sendall(err_msg.encode("utf-8"))
-            except Exception:
-                pass
+            self._send_simple_response(client_sock, "502 Bad Gateway", f"Sentinel Upstream Connect Failed: {e}\n")
             return
 
-        # Tell client the tunnel is established
         try:
             client_sock.sendall(b"HTTP/1.1 200 Connection Established\r\n\r\n")
         except Exception:
@@ -325,10 +455,10 @@ class EgressProxy:
 
         bytes_sent = 0
         bytes_recv = 0
-        sni_domain = None
+        sni_domain: Optional[str] = None
+        sni_checked = False
         first_payload_preview = ""
 
-        # Bidirectional Tunnel Relay using select
         sockets = [client_sock, remote_sock]
         tunnel_open = True
 
@@ -353,13 +483,35 @@ class EgressProxy:
                     break
 
                 if s is client_sock:
-                    bytes_sent += len(data)
-                    # Check for TLS ClientHello SNI on first chunk if not yet detected
-                    if sni_domain is None and len(data) > 5 and data[0] == 0x16:
-                        parsed_sni = extract_sni_hostname(data)
-                        if parsed_sni:
-                            sni_domain = parsed_sni
+                    # Inspect TLS ClientHello SNI BEFORE relaying any bytes upstream!
+                    if not sni_checked:
+                        sni_checked = True
+                        if len(data) > 5 and data[0] == 0x16:
+                            parsed_sni = extract_sni_hostname(data)
+                            if parsed_sni:
+                                sni_domain = parsed_sni
+                                sni_allowed, sni_reason = self.rules.is_allowed(
+                                    sni_domain, target_port, resolved_ip=remote_ip
+                                )
+                                if not sni_allowed:
+                                    # Close immediately without forwarding the ClientHello upstream
+                                    remote_sock.close()
+                                    self._record_quarantined(
+                                        agent_name=agent_name,
+                                        domain=sni_domain,
+                                        remote_ip=remote_ip,
+                                        remote_port=target_port,
+                                        protocol="HTTPS",
+                                        method="CONNECT",
+                                        url_path=f"tunnel://{sni_domain}:{target_port}",
+                                        bytes_sent=0,
+                                        headers={"host": f"{sni_domain}:{target_port}", "connect_target": target_host},
+                                        reason=f"SNI policy violation ({sni_domain}): {sni_reason}",
+                                        start_time=start_time,
+                                    )
+                                    return
 
+                    bytes_sent += len(data)
                     if not first_payload_preview and len(data) > 0:
                         first_payload_preview = f"TLS Handshake ({len(data)} bytes)"
                     try:
@@ -413,37 +565,50 @@ class EgressProxy:
         agent_name: str,
         start_time: float,
     ) -> None:
-        """Handle standard HTTP request forwarding."""
+        """Handle standard HTTP request forwarding with strict scheme, host, SSRF & buffer bounds."""
         parsed = urlparse(target_uri)
-        target_host = parsed.hostname or headers.get("host", "127.0.0.1")
-        if ":" in target_host:
-            target_host, port_str = target_host.split(":", 1)
-            target_port = int(port_str)
+        if parsed.scheme and parsed.scheme.lower() != "http":
+            self._send_simple_response(
+                client_sock,
+                "400 Bad Request",
+                f"Unsupported proxy scheme '{parsed.scheme}'. Only http:// or CONNECT is permitted.\n",
+            )
+            return
+
+        target_host: Optional[str] = None
+        target_port: int = 80
+
+        if parsed.netloc:
+            # Strip any userinfo
+            netloc = parsed.netloc.rsplit("@", 1)[-1]
+            parsed_hp = parse_host_port(netloc, 80)
+            if parsed_hp is None:
+                self._send_simple_response(client_sock, "400 Bad Request", "Invalid target host or port.\n")
+                return
+            target_host, target_port = parsed_hp
+        elif headers.get("host"):
+            parsed_hp = parse_host_port(headers["host"], 80)
+            if parsed_hp is None:
+                self._send_simple_response(client_sock, "400 Bad Request", "Invalid Host header.\n")
+                return
+            target_host, target_port = parsed_hp
         else:
-            target_port = parsed.port or 80
+            self._send_simple_response(client_sock, "400 Bad Request", "Missing Host header.\n")
+            return
 
         url_path = parsed.path or "/"
         if parsed.query:
             url_path += f"?{parsed.query}"
 
         allowed, reason = self.rules.is_allowed(target_host, target_port)
-        category = self.rules.classify(target_host, target_port)
-
         if not allowed:
-            err_body = f"Forbidden: HTTP request to {target_host} blocked by Sentinel.\nReason: {reason}\n"
-            resp = (
-                f"HTTP/1.1 403 Forbidden\r\n"
-                f"Content-Type: text/plain\r\n"
-                f"Content-Length: {len(err_body.encode('utf-8'))}\r\n"
-                f"Connection: close\r\n\r\n"
-                f"{err_body}"
+            self._send_simple_response(
+                client_sock,
+                "403 Forbidden",
+                f"Forbidden: HTTP request to {target_host}:{target_port} blocked by Sentinel.\nReason: {reason}\n",
+                extra_headers="X-Sentinel-Quarantine: 1\r\n",
             )
-            try:
-                client_sock.sendall(resp.encode("utf-8"))
-            except Exception:
-                pass
-
-            self.collector.record(NetworkEvent(
+            self._record_quarantined(
                 agent_name=agent_name,
                 domain=target_host,
                 remote_ip="0.0.0.0",
@@ -451,31 +616,60 @@ class EgressProxy:
                 protocol="HTTP",
                 method=method,
                 url_path=url_path,
-                status_code=403,
                 bytes_sent=len(initial_payload),
-                bytes_recv=0,
-                latency_ms=(time.time() - start_time) * 1000.0,
-                content_type="text/plain",
                 headers=headers,
-                category=category.value if isinstance(category, DomainCategory) else str(category),
-                quarantined=True,
-                notes=reason,
-            ))
+                reason=reason,
+                start_time=start_time,
+            )
             return
 
-        # Read request body if Content-Length specified
+        # Validate Content-Length with strict bounds
         content_len = 0
-        try:
-            content_len = int(headers.get("content-length", "0"))
-        except (ValueError, TypeError):
-            content_len = 0
+        if "content-length" in headers:
+            try:
+                content_len = int(headers["content-length"])
+            except (ValueError, TypeError):
+                self._send_simple_response(client_sock, "400 Bad Request", "Invalid Content-Length header.\n")
+                return
+            if content_len < 0:
+                self._send_simple_response(client_sock, "400 Bad Request", "Negative Content-Length header.\n")
+                return
+            if content_len > MAX_HTTP_REQUEST_BODY_BYTES:
+                self._send_simple_response(client_sock, "413 Payload Too Large", "Request body exceeds sentinel proxy limit.\n")
+                return
+
+        pinned, err_msg, is_policy_block = self._resolve_and_validate_target(target_host, target_port)
+        if pinned is None:
+            if is_policy_block:
+                self._send_simple_response(
+                    client_sock,
+                    "403 Forbidden",
+                    f"Forbidden: Resolved destination for {target_host}:{target_port} blocked.\nReason: {err_msg}\n",
+                    extra_headers="X-Sentinel-Quarantine: 1\r\n",
+                )
+                self._record_quarantined(
+                    agent_name=agent_name,
+                    domain=target_host,
+                    remote_ip="0.0.0.0",
+                    remote_port=target_port,
+                    protocol="HTTP",
+                    method=method,
+                    url_path=url_path,
+                    bytes_sent=len(initial_payload),
+                    headers=headers,
+                    reason=err_msg or "Policy blocked",
+                    start_time=start_time,
+                )
+            else:
+                self._send_simple_response(client_sock, "502 Bad Gateway", f"Gateway Error: {err_msg}\n")
+            return
 
         req_body = initial_payload if isinstance(initial_payload, bytes) else b""
         if b"\r\n\r\n" in req_body:
             _, _, req_body = req_body.partition(b"\r\n\r\n")
 
         while len(req_body) < content_len:
-            to_read = min(4096, content_len - len(req_body))
+            to_read = min(8192, content_len - len(req_body))
             try:
                 chunk = client_sock.recv(to_read)
                 if not chunk:
@@ -484,27 +678,23 @@ class EgressProxy:
             except Exception:
                 break
 
+        family, remote_ip = pinned
         try:
-            remote_sock = socket.create_connection((target_host, target_port), timeout=10.0)
-            remote_ip = remote_sock.getpeername()[0]
+            remote_sock = self._connect_pinned(family, remote_ip, target_port, timeout=10.0)
         except Exception as e:
-            err_msg = f"HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\nGateway Error: {e}\n"
-            try:
-                client_sock.sendall(err_msg.encode("utf-8"))
-            except Exception:
-                pass
+            self._send_simple_response(client_sock, "502 Bad Gateway", f"Gateway Error: {e}\n")
             return
 
         # Rewrite request to relative path for origin server
         origin_request = f"{method} {url_path} HTTP/1.1\r\n"
         for k, v in headers.items():
-            if k.lower() not in ("proxy-connection", "keep-alive"):
+            if k.lower() not in ("proxy-connection", "keep-alive", "proxy-authorization"):
                 origin_request += f"{k.title()}: {v}\r\n"
         origin_request += "Connection: close\r\n\r\n"
 
         bytes_sent = len(origin_request.encode("utf-8")) + len(req_body)
         bytes_recv = 0
-        response_preview = ""
+        preview_buf = bytearray()
         status_code = 200
 
         try:
@@ -512,29 +702,32 @@ class EgressProxy:
             if req_body:
                 remote_sock.sendall(req_body)
 
-            resp_data = b""
             while self._running:
                 chunk = remote_sock.recv(8192)
                 if not chunk:
                     break
-                resp_data += chunk
                 bytes_recv += len(chunk)
+                if len(preview_buf) < MAX_RESPONSE_PREVIEW_BYTES:
+                    need = MAX_RESPONSE_PREVIEW_BYTES - len(preview_buf)
+                    preview_buf.extend(chunk[:need])
                 try:
                     client_sock.sendall(chunk)
                 except Exception:
                     break
 
-            if resp_data:
-                status_line = resp_data.split(b"\r\n", 1)[0].decode("iso-8859-1", errors="replace")
+            if preview_buf:
+                status_line = bytes(preview_buf).split(b"\r\n", 1)[0].decode("iso-8859-1", errors="replace")
                 parts = status_line.split(" ")
                 if len(parts) >= 2 and parts[1].isdigit():
                     status_code = int(parts[1])
-                response_preview = resp_data[:500].decode("utf-8", errors="replace")
 
         except Exception as e:
             logger.debug("HTTP proxy error: %s", e)
         finally:
             remote_sock.close()
+
+        category = self.rules.classify(target_host, target_port)
+        response_preview = bytes(preview_buf[:500]).decode("utf-8", errors="replace")
 
         self.collector.record(NetworkEvent(
             agent_name=agent_name,

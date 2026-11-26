@@ -1,23 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agent Egress Sentinel — AI Network Traffic Sniffer & Endpoint Monitor</title>
-  <meta name="description" content="Zero-dependency network traffic sniffer, domain classifier, and egress radar for AI agents and LLM runtimes. Audit endpoints, prevent exfiltration, and quarantine telemetry in real time.">
+  <title>Agent Egress Sentinel v2.6.0 — AI Network Traffic Sniffer &amp; Endpoint Monitor</title>
+  <meta name="description" content="Zero-dependency Python standard-library HTTP/HTTPS egress proxy, TLS ClientHello SNI inspector, SSRF guard, and real-time domain radar for AI agents and LLM runtimes.">
   <link rel="canonical" href="https://agent-egress.nullai.tech/">
 
   <!-- OpenGraph & Twitter Cards -->
-  <meta property="og:title" content="Agent Egress Sentinel — AI Network Sniffer & Egress Radar">
-  <meta property="og:description" content="Audit every API, domain, and telemetry endpoint contacted by your AI agents in real time. Zero external dependencies.">
+  <meta property="og:title" content="Agent Egress Sentinel v2.6.0 — AI Network Sniffer &amp; Egress Radar">
+  <meta property="og:description" content="Audit every API, domain, and telemetry endpoint contacted by your AI agents in real time with SSRF &amp; SNI enforcement. Zero external dependencies.">
   <meta property="og:url" content="https://agent-egress.nullai.tech/">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://agent-egress.nullai.tech/assets/banner.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@1nc0gn30">
   <meta name="twitter:creator" content="@1nc0gn30">
-  <meta name="twitter:title" content="Agent Egress Sentinel — AI Network Sniffer">
-  <meta name="twitter:description" content="Zero-dependency network traffic sniffer and egress radar for AI agents and LLM runtimes.">
+  <meta name="twitter:title" content="Agent Egress Sentinel v2.6.0 — AI Network Sniffer">
+  <meta name="twitter:description" content="Zero-dependency network traffic sniffer, SSRF guard, and egress radar for AI agents and LLM runtimes.">
   <meta name="twitter:image" content="https://agent-egress.nullai.tech/assets/banner.png">
 
   <!-- Favicon Assets -->
@@ -25,30 +25,96 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon.png">
   <link rel="apple-touch-icon" href="/assets/icon.png">
 
-  <!-- Solana Tip Solana Payment Widget SDK -->
-  <!-- Typography -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <!-- Early Dual-Theme & Embed Resolver (Zero External Requests, Zero FOUC) -->
+  <script>
+    (function () {
+      try {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('embed') === '1') {
+          document.documentElement.setAttribute('data-embed', '1');
+        }
+        var forced = params.get('theme');
+        var stored = localStorage.getItem('egress-sentinel-theme');
+        var prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+        var theme = (forced === 'light' || forced === 'dark')
+          ? forced
+          : (stored === 'light' || stored === 'dark')
+            ? stored
+            : (prefersLight ? 'light' : 'dark');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {}
+    })();
+  </script>
 
   <style>
-    :root {
+    :root,
+    html[data-theme="dark"] {
       --bg-obsidian: #08080B;
       --bg-surface: #101016;
       --bg-surface-elevated: #161620;
-      --border-subtle: rgba(255, 255, 255, 0.08);
-      --border-strong: rgba(255, 255, 255, 0.16);
-      --border-gold: rgba(212, 175, 55, 0.4);
+      --bg-card: rgba(16, 16, 22, 0.84);
+      --bg-header: rgba(8, 8, 11, 0.9);
+      --bg-input: rgba(6, 6, 10, 0.85);
+      --bg-code: rgba(6, 6, 10, 0.78);
+      --bg-table-head: rgba(18, 18, 26, 0.95);
+      --bg-row-hover: rgba(212, 175, 55, 0.05);
+      --bg-modal: #0E0E15;
+      --bg-support: linear-gradient(90deg, rgba(16, 185, 129, 0.12), rgba(212, 175, 55, 0.14));
+      --border-subtle: rgba(255, 255, 255, 0.1);
+      --border-strong: rgba(255, 255, 255, 0.2);
+      --border-gold: rgba(212, 175, 55, 0.42);
       --gold-primary: #D4AF37;
       --gold-light: #FFF2B2;
       --gold-hover: #E6C665;
-      --gold-glow: rgba(212, 175, 55, 0.25);
+      --gold-glow: rgba(212, 175, 55, 0.22);
+      --btn-gold-bg: #D4AF37;
+      --btn-gold-text: #08080B;
       --text-main: #F1F5F9;
       --text-muted: #94A3B8;
       --text-dim: #64748B;
-      --font-display: 'Syne', sans-serif;
-      --font-body: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
+      --accent-emerald: #10B981;
+      --accent-sky: #38BDF8;
+      --accent-crimson: #EF4444;
+      --accent-violet: #A855F7;
+      --accent-amber: #F59E0B;
+      --radar-grid: rgba(255, 255, 255, 0.04);
+      --shadow-card: 0 8px 28px rgba(0, 0, 0, 0.38);
+      --font-display: 'Space Grotesk', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    html[data-theme="light"] {
+      --bg-obsidian: #FAF7F0;
+      --bg-surface: #FFFFFF;
+      --bg-surface-elevated: #F3EFE6;
+      --bg-card: rgba(255, 255, 255, 0.96);
+      --bg-header: rgba(250, 247, 240, 0.94);
+      --bg-input: #F8F5EE;
+      --bg-code: #F3EFE6;
+      --bg-table-head: #F3EFE6;
+      --bg-row-hover: rgba(154, 114, 9, 0.06);
+      --bg-modal: #FFFFFF;
+      --bg-support: linear-gradient(90deg, rgba(4, 120, 87, 0.08), rgba(154, 114, 9, 0.1));
+      --border-subtle: rgba(28, 25, 23, 0.12);
+      --border-strong: rgba(28, 25, 23, 0.24);
+      --border-gold: rgba(154, 114, 9, 0.42);
+      --gold-primary: #9A7209;
+      --gold-light: #785605;
+      --gold-hover: #7D5B06;
+      --gold-glow: rgba(154, 114, 9, 0.14);
+      --btn-gold-bg: #9A7209;
+      --btn-gold-text: #FFFFFF;
+      --text-main: #1C1917;
+      --text-muted: #57534E;
+      --text-dim: #78716C;
+      --accent-emerald: #047857;
+      --accent-sky: #0369A1;
+      --accent-crimson: #BE123C;
+      --accent-violet: #6D28D9;
+      --accent-amber: #B45309;
+      --radar-grid: rgba(28, 25, 23, 0.05);
+      --shadow-card: 0 8px 26px rgba(28, 25, 23, 0.06);
     }
 
     * {
@@ -68,30 +134,50 @@
       -webkit-font-smoothing: antialiased;
     }
 
+    /* Embed Mode (?embed=1 inside Zoth Studio iframe): hide duplicate outer chrome */
+    html[data-embed="1"] #zoth-coffee-support-bar,
+    html[data-embed="1"] header {
+      display: none !important;
+    }
+    html[data-embed="1"] .bento-grid {
+      margin-top: 12px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
     a { color: inherit; text-decoration: none; }
     button, input, select { font-family: inherit; }
 
-    /* Conic Border Beams & Glows */
+    /* Cards */
     .conic-card {
       position: relative;
-      background: rgba(16, 16, 22, 0.7);
+      background: var(--bg-card);
       border: 1px solid var(--border-subtle);
       border-radius: 16px;
-      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow-card);
       transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
     .conic-card:hover {
-      border-color: rgba(212, 175, 55, 0.35);
-      box-shadow: 0 4px 24px rgba(212, 175, 55, 0.05);
+      border-color: var(--border-gold);
     }
 
     .radar-canvas-container {
       background-size: 24px 24px;
-      background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-image: linear-gradient(to right, var(--radar-grid) 1px, transparent 1px),
+                        linear-gradient(to bottom, var(--radar-grid) 1px, transparent 1px);
     }
 
-    /* Layout Containers */
+    /* Layout Container */
     .wrapper {
       width: 100%;
       max-width: 1280px;
@@ -99,68 +185,71 @@
       padding: 0 16px;
     }
 
-    /* Sales Banner */
-    .sales-banner {
+    /* Single Compact Open-Access Support Bar */
+    .support-bar {
       width: 100%;
-      background: linear-gradient(90deg, rgba(30, 20, 10, 0.9), rgba(18, 18, 24, 0.95), rgba(30, 20, 10, 0.9));
-      border-bottom: 1px solid rgba(212, 175, 55, 0.3);
-      padding: 10px 16px;
+      background: var(--bg-support);
+      border-bottom: 1px solid var(--border-gold);
+      padding: 8px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-family: var(--font-mono);
       font-size: 12px;
     }
-    .sales-content {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      max-width: 1280px;
-      margin: 0 auto;
+    .support-pill-label {
+      color: var(--accent-emerald);
+      font-weight: 800;
+      letter-spacing: 0.02em;
     }
-    .sales-left {
-      display: flex;
-      flex-wrap: wrap;
+    .support-btn-stripe {
+      background: var(--btn-gold-bg);
+      color: var(--btn-gold-text);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-weight: 800;
+      display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      min-height: 34px;
     }
-    .sales-actions {
-      display: flex;
+    .support-btn-solana {
+      background: rgba(16, 185, 129, 0.14);
+      color: var(--accent-emerald);
+      border: 1px solid rgba(16, 185, 129, 0.42);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-weight: 800;
+      display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      min-height: 34px;
+      cursor: pointer;
     }
 
     /* Buttons */
     .btn-gold {
-      background: var(--gold-primary);
-      color: #08080B;
+      background: var(--btn-gold-bg);
+      color: var(--btn-gold-text);
       font-weight: 700;
       font-size: 12px;
-      padding: 6px 14px;
+      padding: 8px 14px;
+      min-height: 38px;
       border-radius: 8px;
       border: none;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 6px;
       transition: background 0.2s, transform 0.1s;
-      box-shadow: 0 2px 10px rgba(212, 175, 55, 0.25);
+      box-shadow: 0 2px 10px var(--gold-glow);
     }
     .btn-gold:hover {
       background: var(--gold-hover);
       transform: translateY(-1px);
-    }
-    .btn-purple {
-      background: rgba(126, 34, 206, 0.3);
-      border: 1px solid rgba(168, 85, 247, 0.4);
-      color: #E9D5FF;
-      font-weight: 600;
-      font-size: 12px;
-      padding: 6px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .btn-purple:hover {
-      background: rgba(126, 34, 206, 0.5);
     }
     .btn-secondary {
       background: var(--bg-surface-elevated);
@@ -168,20 +257,39 @@
       color: var(--text-main);
       font-size: 12px;
       font-weight: 600;
-      padding: 6px 12px;
+      padding: 8px 12px;
+      min-height: 38px;
       border-radius: 8px;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
       transition: background 0.2s, border-color 0.2s;
     }
     .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: var(--border-strong);
+      border-color: var(--border-gold);
+    }
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.42);
+      color: var(--accent-crimson);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 8px 12px;
+      min-height: 38px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
 
     /* Header */
     header {
       width: 100%;
-      background: rgba(8, 8, 11, 0.85);
+      background: var(--bg-header);
       backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border-subtle);
       position: sticky;
@@ -206,43 +314,55 @@
       min-width: 0;
     }
     .logo-badge {
-      width: 34px;
-      height: 34px;
-      border-radius: 8px;
-      background: linear-gradient(135deg, #F59E0B, #D4AF37);
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #D4AF37, #9A7209);
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      box-shadow: 0 2px 10px rgba(212, 175, 55, 0.3);
-    }
-    .logo-badge svg {
-      width: 20px;
-      height: 20px;
-      fill: #08080B;
+      box-shadow: 0 2px 10px var(--gold-glow);
+      overflow: hidden;
     }
     .brand-title {
       font-family: var(--font-display);
       font-weight: 800;
-      font-size: 15px;
+      font-size: 16px;
+      line-height: 1.2;
       letter-spacing: -0.02em;
       white-space: nowrap;
+      color: var(--text-main);
     }
     .tag-badge {
       font-family: var(--font-mono);
       font-size: 10px;
-      padding: 2px 6px;
-      border-radius: 4px;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 5px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-gold);
       color: var(--gold-primary);
-      margin-left: 6px;
       white-space: nowrap;
       flex-shrink: 0;
+    }
+    .daemon-status-chip {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.38);
+      color: var(--accent-emerald);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
     .header-actions {
       display: flex;
       align-items: center;
+      flex-wrap: wrap;
       gap: 8px;
       flex-shrink: 0;
     }
@@ -256,22 +376,26 @@
     }
     .bento-item {
       padding: 16px;
+      min-width: 0;
     }
     .metric-label {
       font-size: 11px;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.06em;
       font-family: var(--font-mono);
       color: var(--text-muted);
     }
     .metric-value {
-      font-size: 26px;
+      font-size: clamp(20px, 2.2vw, 26px);
       font-weight: 800;
       font-family: var(--font-display);
       margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .metric-sub {
-      font-size: 10px;
+      font-size: 11px;
       color: var(--text-dim);
       margin-top: 2px;
     }
@@ -292,13 +416,14 @@
       align-items: center;
       gap: 8px;
       flex: 1;
-      min-width: 280px;
+      min-width: 260px;
     }
     .input-field {
-      background: rgba(0, 0, 0, 0.6);
+      background: var(--bg-input);
       border: 1px solid var(--border-subtle);
       border-radius: 8px;
       padding: 8px 12px;
+      min-height: 38px;
       font-size: 12px;
       color: var(--text-main);
       outline: none;
@@ -314,7 +439,7 @@
     }
     select.input-field {
       color: var(--gold-primary);
-      font-weight: 600;
+      font-weight: 700;
     }
 
     /* Main Grid */
@@ -336,7 +461,16 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
       margin-bottom: 12px;
+    }
+    .section-heading {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: 0.02em;
+      color: var(--text-main);
     }
     .radar-legend {
       width: 100%;
@@ -348,7 +482,8 @@
       padding-top: 14px;
       border-top: 1px solid var(--border-subtle);
       font-family: var(--font-mono);
-      font-size: 10px;
+      font-size: 11px;
+      color: var(--text-muted);
     }
     .legend-dot {
       width: 8px;
@@ -374,12 +509,41 @@
       gap: 8px;
       padding-right: 4px;
     }
+    .domain-item {
+      width: 100%;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      min-height: 46px;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface-elevated);
+      color: var(--text-main);
+      cursor: pointer;
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+    .domain-item:hover {
+      border-color: var(--border-gold);
+    }
+    .domain-item.selected {
+      border-color: var(--gold-primary);
+      background: var(--gold-glow);
+    }
+    .info-box {
+      background: var(--bg-code);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
 
     /* Traffic Section */
     .traffic-section {
       padding: 20px;
       margin-top: 20px;
-      margin-bottom: 40px;
     }
     .traffic-header {
       display: flex;
@@ -389,10 +553,16 @@
       gap: 12px;
       margin-bottom: 14px;
     }
+    .traffic-controls {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
     .category-tabs {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 8px;
       border-bottom: 1px solid var(--border-subtle);
       padding-bottom: 12px;
       margin-bottom: 12px;
@@ -401,23 +571,24 @@
       background: transparent;
       border: 1px solid var(--border-subtle);
       color: var(--text-muted);
-      font-size: 11px;
-      font-weight: 500;
-      padding: 4px 10px;
-      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 12px;
+      min-height: 36px;
+      border-radius: 8px;
       cursor: pointer;
       transition: all 0.2s;
     }
     .category-tab.active {
       border-color: var(--gold-primary);
       color: var(--gold-primary);
-      background: rgba(212, 175, 55, 0.1);
+      background: var(--gold-glow);
     }
     .table-responsive {
       width: 100%;
       max-width: 100%;
       overflow-x: auto;
-      border-radius: 8px;
+      border-radius: 10px;
       border: 1px solid var(--border-subtle);
     }
     table {
@@ -427,29 +598,116 @@
       text-align: left;
     }
     th {
-      background: rgba(18, 18, 24, 0.8);
+      background: var(--bg-table-head);
       font-family: var(--font-mono);
       font-size: 10px;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-dim);
-      padding: 10px 14px;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      padding: 11px 14px;
       border-bottom: 1px solid var(--border-subtle);
     }
     td {
       padding: 10px 14px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-main);
     }
     tr:hover td {
-      background: rgba(255, 255, 255, 0.02);
+      background: var(--bg-row-hover);
+    }
+
+    /* Policy Rules Manager Section */
+    .policy-manager {
+      margin-top: 20px;
+      margin-bottom: 36px;
+      padding: 20px;
+      border: 1px solid var(--border-gold);
+    }
+    .rules-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-top: 14px;
+    }
+    .rule-panel {
+      background: var(--bg-code);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .rule-panel h3 {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 10px;
+    }
+    .rule-chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-height: 36px;
+    }
+    .rule-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      color: var(--text-main);
+    }
+    .rule-chip button {
+      background: transparent;
+      border: none;
+      color: var(--accent-crimson);
+      font-weight: 800;
+      cursor: pointer;
+      padding: 2px 6px;
+      min-width: 28px;
+      min-height: 28px;
+      border-radius: 4px;
+    }
+    .rule-chip button:hover {
+      background: rgba(239, 68, 68, 0.14);
+    }
+
+    /* Status pills */
+    .status-pill {
+      display: inline-block;
+      padding: 3px 8px;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      text-transform: uppercase;
+      border-radius: 6px;
+      border: 1px solid transparent;
+    }
+    .status-pill.blocked {
+      color: var(--accent-crimson);
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.36);
+    }
+    .status-pill.ok {
+      color: var(--accent-emerald);
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.36);
+    }
+    .status-pill.warn {
+      color: var(--accent-amber);
+      background: rgba(245, 158, 11, 0.12);
+      border-color: rgba(245, 158, 11, 0.36);
     }
 
     /* Modals */
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: none;
+      background: rgba(0, 0, 0, 0.72);
       z-index: 50;
       display: flex;
       align-items: center;
@@ -457,34 +715,39 @@
       padding: 16px;
     }
     .modal-content {
-      background: #0D0D12;
+      background: var(--bg-modal);
       border: 1px solid var(--border-gold);
       border-radius: 16px;
-      max-width: 520px;
+      max-width: 600px;
       width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
       padding: 24px;
       position: relative;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8);
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
+      color: var(--text-main);
     }
     .modal-close {
       position: absolute;
-      top: 16px;
-      right: 16px;
-      background: none;
-      border: none;
-      color: var(--text-dim);
-      font-size: 18px;
+      top: 14px;
+      right: 14px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      font-size: 16px;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
       cursor: pointer;
     }
-    .modal-close:hover { color: var(--text-main); }
 
     /* Footer */
     footer {
       border-top: 1px solid var(--border-subtle);
-      background: rgba(8, 8, 11, 0.95);
-      padding: 24px 16px;
+      background: var(--bg-surface);
+      padding: 20px 16px;
       font-size: 12px;
-      color: var(--text-dim);
+      color: var(--text-muted);
     }
     .footer-inner {
       max-width: 1280px;
@@ -495,35 +758,86 @@
       justify-content: space-between;
       gap: 12px;
     }
+    .footer-links {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .footer-links a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 4px 6px;
+    }
 
-    /* Triple-Viewport Responsiveness Guarantees */
+    /* Toast */
+    .sentinel-toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 60;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border-gold);
+      background: var(--bg-modal);
+      color: var(--text-main);
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    /* Triple-Viewport Responsiveness & Mobile >= 44px Tap Targets */
     @media (max-width: 1024px) {
       .bento-grid { grid-template-columns: repeat(3, 1fr); }
       .main-grid { grid-template-columns: 1fr; }
+      .rules-grid { grid-template-columns: 1fr; }
     }
 
-    @media (max-width: 640px) {
-      .bento-grid { grid-template-columns: repeat(2, 1fr); }
+    @media (max-width: 768px) {
+      button,
+      .btn-gold,
+      .btn-secondary,
+      .btn-danger,
+      .category-tab,
+      .input-field,
+      select.input-field,
+      .support-btn-stripe,
+      .support-btn-solana,
+      .modal-close,
+      .rule-chip button,
+      footer a {
+        display: inline-flex !important;
+        align-items: center !important;
+        min-height: 44px !important;
+      }
+      .modal-close,
+      .rule-chip button {
+        min-width: 44px !important;
+      }
+      .bento-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
       .bento-grid > div:last-child { grid-column: span 2; }
-      .header-inner { flex-direction: column; align-items: flex-start; gap: 8px; }
-      .header-actions { width: 100%; justify-content: space-between; }
+      .metric-value { font-size: 20px; }
+      .header-inner { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .header-actions { width: 100%; justify-content: flex-start; }
       .runner-form { flex-direction: column; align-items: stretch; width: 100%; }
       .runner-bar { flex-direction: column; align-items: stretch; }
-      .policy-selector { justify-content: space-between; width: 100%; }
-      .sales-content { flex-direction: column; align-items: flex-start; }
-      .sales-actions { width: 100%; justify-content: flex-start; }
+      .policy-selector { flex-direction: column; align-items: stretch; width: 100%; }
+      .traffic-controls { width: 100%; }
+      .traffic-controls .input-field { width: 100% !important; }
       #radarCanvas { max-width: 100% !important; height: auto !important; }
     }
 
-    /* Utilities */
     .hidden { display: none !important; }
     .pulse-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #10B981;
+      background: var(--accent-emerald);
       display: inline-block;
-      box-shadow: 0 0 8px #10B981;
+      box-shadow: 0 0 8px var(--accent-emerald);
+      flex-shrink: 0;
     }
   </style>
 
@@ -537,13 +851,14 @@
     "@context": "https://schema.org",
     "@graph": [
       {
-        "@type": "WebApplication",
+        "@type": "SoftwareApplication",
         "@id": "https://agent-egress.nullai.tech/#app",
         "name": "Agent Egress Sentinel",
+        "softwareVersion": "2.6.0",
         "url": "https://agent-egress.nullai.tech/",
         "applicationCategory": "SecurityApplication, DeveloperApplication",
         "operatingSystem": "Linux, macOS, Windows",
-        "description": "Zero-dependency network traffic sniffer, domain classifier, and egress radar for AI agents and LLM runtimes.",
+        "description": "Zero-dependency Python standard-library HTTP/HTTPS CONNECT egress proxy, TLS ClientHello SNI inspector, SSRF guard, and real-time domain radar for AI agents and LLM runtimes.",
         "offers": {
           "@type": "Offer",
           "price": "0",
@@ -553,9 +868,9 @@
         },
         "creator": {
           "@type": "Organization",
-          "name": "1nc0gn30 • NullAI",
+          "name": "Neal Frazier Tech (@1nc0gn30) • NullAI Platform",
           "url": "https://nullai.tech",
-          "sameAs": ["https://github.com/1nc0gn30", "https://nullai.tech"]
+          "sameAs": ["https://github.com/1nc0gn30/agent-egress-sentinel", "https://nullai.tech"]
         }
       },
       {
@@ -567,7 +882,7 @@
             "name": "What is Agent Egress Sentinel?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Agent Egress Sentinel is an autonomous network sniffer and visual radar that captures, classifies, and audits all domains, IP addresses, and endpoints contacted by AI agents and LLM runtimes in real time."
+              "text": "Agent Egress Sentinel is a zero-dependency Python 3.9+ HTTP and HTTPS CONNECT forward proxy (:8195) paired with a live local web radar (:8095), SSRF/private-network guard, and stdio MCP server for auditing and quarantining AI agent egress."
             }
           },
           {
@@ -575,15 +890,15 @@
             "name": "Does it require installing root CA certificates?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "No. Sentinel uses an in-memory TLS ClientHello SNI extractor that inspects standard HTTPS handshakes without breaking encryption or creating certificate installation friction."
+              "text": "No. Sentinel parses TLS ClientHello SNI hostnames in memory before relaying encrypted payloads, enforcing allowlist/blocklist and quarantine policies without MITM root certificates."
             }
           },
           {
             "@type": "Question",
-            "name": "Can I enforce zero-egress or block telemetry?",
+            "name": "Is Agent Egress Sentinel free and private?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Yes. Sentinel includes a built-in Rules Engine supporting allow_all, block_telemetry, zero_egress local isolation, and custom allowlist/blocklists."
+              "text": "Yes. It is 100% free and open access with zero paywalls, zero external runtime dependencies, and loopback-only local storage. Voluntary support is accepted via Stripe Buy Us a Coffee or Solana tips."
             }
           }
         ]
@@ -591,75 +906,43 @@
     ]
   }
   </script>
-
-  <!-- Zoth 100% Open-Access & Buy Us a Coffee Invariant -->
-  <script id="zoth-open-access-init">
-    (function() {
-      try {
-        var keys = ['agent_audiocipher_pro', 'agent_cyber_turtle_pro', 'agent_datamosh_pro', 'agent_nexus3d_pro', 'agent_policy_pro', 'audiocipher_license', 'audiocipher_pro_licensed', 'badge3d_pro_licensed', 'certpath_pro_key', 'certpath_pro_licensed', 'cron_rhythm_pro_key', 'cron_rhythm_pro_licensed', 'cwv-speed-engine_pro_licensed', 'cwv_pro_licensed', 'cyber_turtle_pro_licensed', 'datamosh_pro_licensed', 'deepsearch-research-agent_pro_licensed', 'deepsearch_pro_licensed', 'entropy_studio_licensed', 'envguard-secrets-vault_pro_licensed', 'envguard_pro_license', 'etsy_connector_pro', 'jwt_guard_licensed', 'mdg_pro_licensed', 'neuro_pro_licensed', 'nexus3d_pro_licensed', 'omnipost_pro_key', 'omnipost_pro_licensed', 'osint_pro_licensed', 'payload-entropy-studio_pro_licensed', 'polyglot_pro_licensed', 'pro_licensed', 'promptmaster_pro_licensed', 'promptmaster_pro_active', 'robots-txt-auditor_pro_licensed', 'robots_pro_licensed', 'schema_illustrator_pro_licensed', 'sovereign_pro_licensed', 'subsweep-lead-scanner_pro_licensed', 'subsweep_licensed', 'turtle_pro_licensed', 'ufo_sacred_licensed', 'vector-search-engine_pro_licensed', 'vector_studio_pro_licensed', 'web-security-guard_pro_licensed', 'web_security_guard_licensed', 'yourdigitalspace_pro', 'zela_guide_pro_licensed', 'zoth_ascii_magic_pro', 'zoth_audiocipher_licensed', 'zoth_badge3d_licensed', 'zoth_cyber_turtle_licensed', 'zoth_datamosh_licensed', 'zoth_etsy_licensed', 'zoth_nexus3d_licensed', 'zoth_osint_licensed', 'zoth_policy_licensed', 'zoth_sacred_licensed', 'zoth_ufo_licensed'];
-        for (var i = 0; i < keys.length; i++) {
-          localStorage.setItem(keys[i], 'true');
-        }
-        localStorage.setItem('pm_license_v2', JSON.stringify({ method: 'open_access', ref: 'free_forever', at: '2026-01-01T00:00:00Z' }));
-        window.isPro = true;
-      } catch (e) {}
-    })();
-  </script>
-
 </head>
 
 <body>
 
-<div id="zoth-coffee-support-bar" style="background: linear-gradient(90deg, rgba(16,185,129,0.12), rgba(212,175,55,0.14)); border-bottom: 1px solid rgba(212,175,55,0.35); padding: 8px 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; z-index: 9999;">
-  <span style="color: #10B981; font-weight: 800;">✦ 100% FREE &amp; OPEN ACCESS · ZERO PAYWALLS</span>
-  <a href="https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X" target="_blank" rel="noopener noreferrer" style="background: #D4AF37; color: #08080B; padding: 4px 12px; border-radius: 6px; font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">☕ Buy Us a Coffee (Stripe)</a>
-  <a href="solana:GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK" onclick="if(navigator.clipboard){navigator.clipboard.writeText('GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK');this.textContent='✓ Copied GG2eQb...dXoK!';}" style="background: rgba(20,241,149,0.15); color: #14F195; border: 1px solid rgba(20,241,149,0.45); padding: 4px 12px; border-radius: 6px; font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">◎ Solana Tip (GG2e...dXoK)</a>
-</div>
-
-
-  <!-- Sovereign Open Access Support Bar -->
-  <aside id="salesBanner" aria-label="Sovereign Open Access Support Bar" class="sales-banner" style="background: linear-gradient(90deg, rgba(16,185,129,0.12), rgba(212,175,55,0.14)); border: 1px solid rgba(212,175,55,0.35);">
-    <div class="sales-content">
-      <div class="sales-left">
-        <span class="pulse-dot" style="background: var(--gold-primary); box-shadow: 0 0 8px var(--gold-primary);"></span>
-        <strong style="color: #10B981; text-transform: uppercase;">✦ SOVEREIGN OPEN ACCESS:</strong>
-        <span>Autonomous Network Interceptor & Egress Radar — 100% Free & Unlocked. Voluntary tips support development.</span>
-      </div>
-      <div class="sales-actions">
-        <a href="https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X" target="_blank" rel="noopener noreferrer" class="btn-gold" style="background: #D4AF37; color: #08080B; font-weight: 800;">
-          ☕ Buy Us a Coffee (Stripe)
-        </a>
-        <a href="solana:GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK" target="_blank" rel="noopener noreferrer" class="btn-purple" style="background: #10B981; color: #FFFFFF; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center;" onclick="window.payWithSolana(event)">
-          Solana Tip ⚡
-        </a>
-      </div>
-    </div>
+  <!-- Single Compact Open-Access Support Bar (Auto-hidden when ?embed=1) -->
+  <aside id="zoth-coffee-support-bar" class="support-bar" aria-label="Open Access Support Bar">
+    <span class="support-pill-label">✦ 100% FREE &amp; OPEN ACCESS · ZERO PAYWALLS</span>
+    <a href="https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X" target="_blank" rel="noopener noreferrer" class="support-btn-stripe">☕ Buy Us a Coffee</a>
+    <button type="button" id="btnSolanaTipBar" class="support-btn-solana" aria-label="Copy Solana tip address">◎ Solana Tip (GG2e...dXoK)</button>
   </aside>
 
-  <!-- Sticky Header -->
+  <!-- Sticky Header (Auto-hidden when ?embed=1) -->
   <header>
     <div class="header-inner">
       <div class="brand">
         <div class="logo-badge" title="Agent Egress Sentinel">
-          <img src="assets/icon.png" alt="Agent Egress Sentinel Icon" class="logo-img" style="width: 28px; height: 28px; border-radius: 6px;">
+          <img src="/assets/icon.png" alt="Agent Egress Sentinel emblem" style="width: 32px; height: 32px; object-fit: cover; border-radius: 7px;">
         </div>
         <div>
-          <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">
-            <span class="brand-title">AGENT EGRESS SENTINEL</span>
-            <span class="tag-badge" style="margin-left: 0;">v2.5 SOVEREIGN</span>
+          <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <h1 class="brand-title">AGENT EGRESS SENTINEL</h1>
+            <span class="tag-badge">v2.6.0</span>
           </div>
-          <div style="font-size: 10px; color: var(--text-muted);">Autonomous AI Network Interceptor & Telemetry Radar</div>
+          <div style="font-size: 11px; color: var(--text-muted);">Zero-Dependency AI Egress Proxy, SNI Inspector &amp; SSRF Guard</div>
         </div>
       </div>
 
       <div class="header-actions">
-        <span id="sseIndicator" class="pulse-dot" title="Live Radar Connected"></span>
-        <span id="licenseBadge" class="license-badge" onclick="window.openProModal()" style="font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 9999px; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); color: var(--gold-primary); cursor: pointer;">
-          ⚡ FREE TIER
+        <span id="daemonModeBadge" class="daemon-status-chip">
+          <span id="sseIndicator" class="pulse-dot" aria-hidden="true"></span>
+          <span id="daemonModeText">PROBING DAEMON...</span>
         </span>
-        <span id="proStatusBadge" class="hidden"></span>
-        <button id="btnSimulateLive" onclick="window.runAgentSimulation()" class="btn-secondary" style="border-color: rgba(212,175,55,0.4); color: var(--gold-primary);">
-          ⚡ Simulate
+        <button type="button" id="themeToggleBtn" class="btn-secondary" aria-label="Toggle Light and Dark Theme">
+          ☀ Light
+        </button>
+        <button type="button" id="btnSimulateLive" class="btn-secondary" style="border-color: var(--border-gold); color: var(--gold-primary);">
+          ⚡ Demo Event Probe
         </button>
       </div>
     </div>
@@ -673,7 +956,7 @@
       <div class="conic-card bento-item">
         <div class="metric-label">Total Requests</div>
         <div id="statTotalReqs" class="metric-value">0</div>
-        <div class="metric-sub">Egress packet stream</div>
+        <div class="metric-sub">Captured egress events</div>
       </div>
       <div class="conic-card bento-item">
         <div class="metric-label">Unique Domains</div>
@@ -682,35 +965,42 @@
       </div>
       <div class="conic-card bento-item">
         <div class="metric-label">Data Transferred</div>
-        <div id="statTotalData" class="metric-value" style="color: #38BDF8;">0 B</div>
-        <div class="metric-sub">Sent & received total</div>
+        <div id="statTotalData" class="metric-value" style="color: var(--accent-sky);">0 B</div>
+        <div class="metric-sub">Sent &amp; received total</div>
       </div>
       <div class="conic-card bento-item">
         <div class="metric-label">Avg Latency</div>
-        <div id="statAvgLatency" class="metric-value" style="color: #10B981;">0ms</div>
+        <div id="statAvgLatency" class="metric-value" style="color: var(--accent-emerald);">0ms</div>
         <div class="metric-sub">Roundtrip duration</div>
       </div>
       <div class="conic-card bento-item">
         <div class="metric-label">Quarantined</div>
-        <div id="statQuarantined" class="metric-value" style="color: #EF4444;">0</div>
-        <div class="metric-sub">Blocked by policy</div>
+        <div id="statQuarantined" class="metric-value" style="color: var(--accent-crimson);">0</div>
+        <div class="metric-sub">Blocked by policy / SSRF</div>
       </div>
     </div>
 
-    <!-- Agent Command Runner Bar -->
+    <!-- Agent Command Runner & Quarantine Policy Bar -->
     <div class="conic-card runner-bar">
-      <form id="runAgentForm" class="runner-form">
-        <input id="runAgentName" type="text" placeholder="Agent Tag" value="autonomous_agent" class="input-field" style="max-width: 140px;">
-        <input id="runCommandInput" type="text" placeholder="Command to supervise (e.g. python3 agent.py)" class="input-field" style="flex: 1; font-family: var(--font-mono);">
-        <button type="submit" class="btn-gold">Launch Under Sentinel</button>
+      <form id="runAgentForm" class="runner-form" aria-label="Supervised agent launcher">
+        <label for="runAgentName" class="sr-only">Agent Tag</label>
+        <input id="runAgentName" type="text" placeholder="Agent Tag" value="autonomous_agent" aria-label="Agent Tag" class="input-field" style="max-width: 150px;">
+
+        <label for="runCommandInput" class="sr-only">Command to supervise</label>
+        <input id="runCommandInput" type="text" placeholder="Command to supervise (e.g. python3 agent.py)" aria-label="Command to supervise" class="input-field" style="flex: 1; min-width: 180px; font-family: var(--font-mono);">
+
+        <label for="runTokenInput" class="sr-only">Sentinel API Token</label>
+        <input id="runTokenInput" type="password" placeholder="X-Sentinel-Token (CLI: token)" aria-label="Sentinel API Token" class="input-field" style="max-width: 210px; font-family: var(--font-mono);" autocomplete="off">
+
+        <button type="submit" class="btn-gold">Launch Supervised</button>
       </form>
 
       <div class="policy-selector">
-        <span style="font-size: 11px; color: var(--text-muted);">Policy:</span>
-        <select id="policyModeSelect" onchange="window.changeQuarantinePolicy(this.value)" class="input-field">
-          <option value="allow_all">ALLOW ALL (Monitor Only)</option>
+        <label for="policyModeSelect" style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Policy:</label>
+        <select id="policyModeSelect" aria-label="Quarantine Policy Mode" class="input-field">
+          <option value="allow_all">ALLOW ALL (Monitor + SSRF Guard)</option>
           <option value="block_telemetry">BLOCK TELEMETRY (Defend)</option>
-          <option value="zero_egress">ZERO EGRESS (Quarantine)</option>
+          <option value="zero_egress">ZERO EGRESS (Loopback Only)</option>
           <option value="allowlist_only">ALLOWLIST ONLY (Strict)</option>
         </select>
       </div>
@@ -720,81 +1010,84 @@
     <div class="main-grid">
 
       <!-- Interactive Radar Screen -->
-      <div class="conic-card radar-card radar-canvas-container">
+      <section class="conic-card radar-card radar-canvas-container" aria-label="Egress Vector Radar">
         <div class="radar-header">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span class="pulse-dot" style="background: var(--gold-primary);"></span>
-            <span style="font-family: var(--font-display); font-weight: 700; font-size: 13px;">EGRESS VECTOR RADAR</span>
+            <span class="pulse-dot" style="background: var(--gold-primary); box-shadow: 0 0 8px var(--gold-primary);"></span>
+            <h2 class="section-heading">EGRESS VECTOR RADAR</h2>
           </div>
-          <span style="font-family: var(--font-mono); font-size: 10px; color: var(--text-muted);">
-            Proxy: <strong style="color: var(--gold-primary);">127.0.0.1:8096</strong>
+          <span style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">
+            Proxy: <strong id="proxyEndpointBadge" style="color: var(--gold-primary);">127.0.0.1:8195</strong>
           </span>
         </div>
 
         <div style="width: 100%; display: flex; justify-content: center; padding: 10px 0;">
-          <canvas id="radarCanvas" width="580" height="580" style="max-width: 100%; height: auto;"></canvas>
+          <canvas id="radarCanvas" width="540" height="540" aria-label="Orbital domain traffic radar visualization" style="max-width: 100%; height: auto;"></canvas>
         </div>
 
         <div class="radar-legend">
-          <div><span class="legend-dot" style="background: #38BDF8;"></span>LLM APIs</div>
-          <div><span class="legend-dot" style="background: #A855F7;"></span>Model Hubs</div>
-          <div><span class="legend-dot" style="background: #EF4444;"></span>Telemetry</div>
-          <div><span class="legend-dot" style="background: #10B981;"></span>Search/Scrapers</div>
-          <div><span class="legend-dot" style="background: #F59E0B;"></span>Local / Sandboxed</div>
+          <div><span class="legend-dot" style="background: var(--accent-sky);"></span>LLM APIs</div>
+          <div><span class="legend-dot" style="background: var(--accent-violet);"></span>Model Hubs</div>
+          <div><span class="legend-dot" style="background: var(--accent-crimson);"></span>Telemetry / SSRF</div>
+          <div><span class="legend-dot" style="background: var(--accent-emerald);"></span>Search / Scrapers</div>
+          <div><span class="legend-dot" style="background: var(--accent-amber);"></span>Local Loopback</div>
         </div>
-      </div>
+      </section>
 
       <!-- Contacted Domains Matrix -->
-      <div class="conic-card domain-list-card">
+      <section class="conic-card domain-list-card" aria-label="Contacted Domains">
         <div>
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-            <span style="font-family: var(--font-display); font-weight: 700; font-size: 13px;">CONTACTED DOMAINS</span>
-            <button onclick="window.clearLogs()" style="background: none; border: none; color: var(--text-dim); font-size: 11px; cursor: pointer;">Clear Logs</button>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px;">
+            <h2 class="section-heading">CONTACTED DOMAINS</h2>
+            <button type="button" id="btnClearLogs" class="btn-secondary" style="padding: 6px 10px; font-size: 11px;">Clear Logs</button>
           </div>
-          <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Click a domain to isolate its traffic packets below:</div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Select a domain to isolate its captured packets below:</div>
           <div id="domainList" class="domain-scroll">
-            <!-- Dynamically populated -->
+            <!-- Dynamically populated safely via DOM APIs -->
           </div>
         </div>
 
-        <div style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 12px; font-size: 11px;">
-          <div style="color: var(--gold-primary); font-weight: 700; margin-bottom: 6px;">ZERO-DEPENDENCY CORE:</div>
-          <div style="color: var(--text-muted); line-height: 1.6;">
-            • Pure Python Standard Library<br>
-            • In-Memory TLS ClientHello SNI sniffer<br>
-            • Linux /proc socket descriptor audit
+        <div class="info-box">
+          <div style="color: var(--gold-primary); font-family: var(--font-mono); font-weight: 800; font-size: 11px; margin-bottom: 6px;">ACTIVE SECURITY INVARIANTS:</div>
+          <div style="line-height: 1.65;">
+            • Pure Python 3.9+ stdlib proxy (<span id="proxyPortInline">127.0.0.1:8195</span>)<br>
+            • Pre-relay TLS ClientHello SNI policy check<br>
+            • RFC1918, 169.254.0.0/16 &amp; self-port SSRF block<br>
+            • Token-gated <code>/api/run</code> + Host/Origin CSRF guard
           </div>
         </div>
-      </div>
+      </section>
 
     </div>
 
     <!-- Live Traffic Stream Section -->
-    <div class="conic-card traffic-section">
+    <section class="conic-card traffic-section" aria-label="Live Egress Traffic Stream">
       <div class="traffic-header">
         <div>
-          <h2 style="font-family: var(--font-display); font-weight: 700; font-size: 15px;">Live Egress Traffic Stream</h2>
-          <div style="font-size: 11px; color: var(--text-muted);">Real-time packet inspection for AI agent requests and tunnels.</div>
+          <h2 class="section-heading" style="font-size: 16px;">Live Egress Traffic Stream</h2>
+          <div style="font-size: 12px; color: var(--text-muted);">Real-time userspace HTTP &amp; HTTPS CONNECT audit log via SSE.</div>
         </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <input id="tableSearchInput" type="text" placeholder="Search domain, agent, endpoint..." class="input-field" style="width: 220px;">
-          <button id="btnExportOpenApiLive" onclick="window.handleExportOpenAPI()" class="btn-secondary" style="padding: 6px 12px; font-weight: 700; color: var(--gold-primary); border-color: rgba(212,175,55,0.4);">
+        <div class="traffic-controls">
+          <label for="tableSearchInput" class="sr-only">Filter traffic stream by domain, agent, or endpoint</label>
+          <input id="tableSearchInput" type="text" placeholder="Search domain, agent, endpoint..." aria-label="Filter traffic stream" class="input-field" style="width: 220px;">
+          <button type="button" id="btnExportOpenApiLive" class="btn-secondary" style="color: var(--gold-primary); border-color: var(--border-gold);">
             ▣ OpenAPI 3.0
           </button>
-          <button id="btnExportHarLive" onclick="window.handleExportHAR()" class="btn-gold" style="padding: 6px 12px;">
+          <button type="button" id="btnExportHarLive" class="btn-gold">
             ↓ Export HAR 1.2
           </button>
         </div>
       </div>
 
       <!-- Filter Tabs -->
-      <div class="category-tabs">
-        <button class="category-tab active" data-category="all">All Egress</button>
-        <button class="category-tab" data-category="llm_api">LLM APIs</button>
-        <button class="category-tab" data-category="model_hub">Model Hubs</button>
-        <button class="category-tab" data-category="telemetry_tracker">Telemetry</button>
-        <button class="category-tab" data-category="search_scraper">Search</button>
-        <button class="category-tab" data-category="local_service">Local Services</button>
+      <div class="category-tabs" role="tablist" aria-label="Filter traffic by category">
+        <button type="button" class="category-tab active" data-category="all">All Egress</button>
+        <button type="button" class="category-tab" data-category="llm_api">LLM APIs</button>
+        <button type="button" class="category-tab" data-category="model_hub">Model Hubs</button>
+        <button type="button" class="category-tab" data-category="telemetry_tracker">Telemetry</button>
+        <button type="button" class="category-tab" data-category="search_scraper">Search</button>
+        <button type="button" class="category-tab" data-category="private_network">Private / SSRF</button>
+        <button type="button" class="category-tab" data-category="local_service">Local Services</button>
       </div>
 
       <!-- Traffic Table -->
@@ -805,7 +1098,7 @@
               <th>Time</th>
               <th>Agent</th>
               <th>Destination Domain</th>
-              <th>Protocol / Method</th>
+              <th>Protocol / Status</th>
               <th>Throughput</th>
               <th>Latency</th>
               <th style="text-align: right;">Action</th>
@@ -813,68 +1106,62 @@
           </thead>
           <tbody id="trafficTableBody">
             <tr>
-              <td colspan="7" style="padding: 30px; text-align: center; color: var(--text-dim); font-size: 12px;">
-                Listening for agent traffic on proxy port 8096... Run an agent or simulate traffic above.
+              <td colspan="7" style="padding: 28px; text-align: center; color: var(--text-muted); font-family: var(--font-mono); font-size: 12px;">
+                Listening for agent traffic on proxy <span id="proxyEmptyHint">127.0.0.1:8195</span>... Route an agent or run Demo Event Probe above.
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
 
-    <!-- Kernel Egress Quarantine & Deep HAR Replay Vault -->
-    <div id="kernelQuarantineSection" class="conic-card" style="position: relative; margin-top: 24px; margin-bottom: 40px; padding: 24px; overflow: hidden; border: 1px solid rgba(212, 175, 55, 0.25);">
-      
-      <!-- Kernel Egress Quarantine Controls (100% Open Access) -->
-      <div id="kernelQuarantineContent">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <div>
-            <h3 style="font-family: var(--font-display); font-size: 16px; font-weight: 800; color: var(--gold-primary);">
-              ❖ KERNEL EGRESS QUARANTINE & DEEP PACKET REPLAY VAULT
-            </h3>
-            <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
-              Autonomous in-kernel TCP RST injection, full-payload hex disassembler, and continuous HAR 1.2 streaming.
-            </p>
-          </div>
-          <div style="display: flex; gap: 8px;">
-            <button class="btn-secondary" style="font-size: 11px; border-color: rgba(239, 68, 68, 0.5); color: #EF4444;">
-              ⚡ RST Injector: ACTIVE
-            </button>
-            <button class="btn-gold" style="font-size: 11px;">
-              ↻ Automated Replay
-            </button>
+    <!-- Live Allowlist & Blocklist Policy Manager (Backed by /api/rules) -->
+    <section id="policyRulesSection" class="conic-card policy-manager" aria-label="Allowlist and Blocklist Policy Manager">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;">
+        <div>
+          <h2 class="section-heading" style="font-size: 16px; color: var(--gold-primary);">
+            ❖ ALLOWLIST &amp; BLOCKLIST POLICY MANAGER
+          </h2>
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+            Manage live userspace proxy rules backed by <code>/api/rules</code>, <code>/api/rules/allow</code>, <code>/api/rules/block</code>, and <code>DELETE</code> endpoints. Wildcards like <code>*.telemetry.example.com</code> are supported.
+          </p>
+        </div>
+        <div id="protectedPortsBadge" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">
+          Protected Control Ports: <strong style="color: var(--accent-crimson);">8095, 8195</strong>
+        </div>
+      </div>
+
+      <form id="ruleEditorForm" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px;" aria-label="Add domain policy rule">
+        <label for="ruleDomainInput" class="sr-only">Domain or wildcard rule</label>
+        <input id="ruleDomainInput" type="text" placeholder="Enter domain or wildcard (e.g. api.segment.io or *.example.com)" aria-label="Domain or wildcard rule" class="input-field" style="flex: 1; min-width: 240px; font-family: var(--font-mono);">
+        <button type="button" id="btnAddAllowRule" class="btn-gold">+ Add to Allowlist</button>
+        <button type="button" id="btnAddBlockRule" class="btn-danger">🚫 Add to Blocklist</button>
+      </form>
+
+      <div class="rules-grid">
+        <div class="rule-panel">
+          <h3 style="color: var(--accent-emerald);">✓ Explicit Allowlist (<span id="allowCount">0</span>)</h3>
+          <div id="allowedDomainsList" class="rule-chip-list">
+            <span style="font-size: 12px; color: var(--text-dim);">No custom allowlist rules configured.</span>
           </div>
         </div>
-
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px;">
-          <div style="background: rgba(0, 0, 0, 0.6); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px; font-family: var(--font-mono); font-size: 11px; color: #94A3B8; max-height: 180px; overflow: hidden;">
-            <div style="color: var(--gold-primary); font-weight: 700; margin-bottom: 6px;">LIVE KERNEL SOCKET STREAM [/proc/net/tcp]:</div>
-            <div style="color: #38BDF8;">00000000: 4500 003c 1a2b 4000 4006 e12a 7f00 0001  E..<+@.@..*....</div>
-            <div style="color: #10B981;">00000010: 7f00 0001 9c40 1f92 0000 0000 0000 0000  .....@..........</div>
-            <div style="color: #EF4444;">00000020: a002 7210 9f12 0000 0204 05b4 0402 080a  ..r.............</div>
-            <div style="color: #F59E0B;">00000030: 023f b412 0000 0000 0103 0307 [SNI: api.openai.com] QUARANTINE_ARMED</div>
-          </div>
-          <div style="background: rgba(0, 0, 0, 0.6); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px; font-size: 11px;">
-            <div style="color: var(--gold-primary); font-weight: 700; margin-bottom: 6px;">EXFILTRATION COUNTERMEASURES:</div>
-            <div style="color: var(--text-muted); line-height: 1.6;">
-              ✓ TCP Reset on unverified outbound TLS<br>
-              ✓ In-Memory TLS 1.3 ClientHello Decoder<br>
-              ✓ Telemetry Deflector (Segment / PostHog)<br>
-              ✓ Multi-Agent Session HAR 1.2 Export
-            </div>
+        <div class="rule-panel">
+          <h3 style="color: var(--accent-crimson);">🚫 Explicit Blocklist (<span id="blockCount">0</span>)</h3>
+          <div id="blockedDomainsList" class="rule-chip-list">
+            <span style="font-size: 12px; color: var(--text-dim);">No custom blocklist rules configured.</span>
           </div>
         </div>
       </div>
-    </div>
+    </section>
   </main>
 
   <!-- Inspection Modal -->
-  <div id="inspectModal" class="modal-overlay hidden">
-    <div class="modal-content" style="max-width: 600px;">
-      <button onclick="document.getElementById('inspectModal').classList.add('hidden')" class="modal-close" aria-label="Close modal">✕</button>
-      <div style="font-family: var(--font-display); font-weight: 700; font-size: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+  <div id="inspectModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="inspectModalTitle">
+    <div class="modal-content">
+      <button type="button" id="btnCloseInspectModal" class="modal-close" aria-label="Close inspection modal">✕</button>
+      <h3 id="inspectModalTitle" class="section-heading" style="margin-bottom: 14px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
         PACKET DEEP INSPECTION
-      </div>
+      </h3>
       <div id="inspectModalContent"></div>
     </div>
   </div>
@@ -883,63 +1170,18 @@
   <footer>
     <div class="footer-inner">
       <div>
-        Engineered by 1nc0gn30 • NullAI (<a href="https://github.com/1nc0gn30" target="_blank" rel="noopener noreferrer" style="color: var(--gold-primary);">@1nc0gn30</a>) • <a href="https://nullai.tech" target="_blank" rel="noopener noreferrer" style="color: var(--gold-primary);">NullAI Platform</a>
+        Engineered by <strong>Neal Frazier Tech</strong> (<a href="https://github.com/1nc0gn30" target="_blank" rel="noopener noreferrer" style="color: var(--gold-primary);">@1nc0gn30</a>) • <a href="https://nullai.tech" target="_blank" rel="noopener noreferrer" style="color: var(--gold-primary);">NullAI Platform</a>
       </div>
-      <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+      <div class="footer-links">
         <a href="https://github.com/1nc0gn30/agent-egress-sentinel" target="_blank" rel="noopener noreferrer">GitHub</a>
-        <a href="https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X" target="_blank" rel="noopener noreferrer">☕ Buy Us a Coffee (Stripe)</a>
-        <a href="solana:GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK">◎ Solana Tip (GG2e...dXoK)</a>
-        <a href="https://nullai.tech" target="_blank" rel="noopener noreferrer">1nc0gn30 • NullAI</a>
-        <a href="/api/stats" target="_blank">REST API</a>
+        <a href="https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X" target="_blank" rel="noopener noreferrer">☕ Buy Us a Coffee</a>
+        <a href="solana:GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK" id="footerSolanaLink">◎ Solana Tip</a>
+        <a href="/api/health" target="_blank">Health JSON</a>
         <a href="/sitemap.xml" target="_blank">Sitemap</a>
       </div>
     </div>
   </footer>
 
-  <script>
-    function payWithSolana(e) {
-      if (e) e.preventDefault();
-      const addr = 'GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK';
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(addr);
-      }
-      showToast('⚡ Solana Tip Address copied: ' + addr, 'success');
-    }
-  </script>
-
   <script src="/radar_engine.js"></script>
-  <script src="/assets/sovereign-upgrade.js" defer></script>
-
-  <script src="/sovereign_tutorial.js"></script>
-  <script>
-    window.addEventListener("DOMContentLoaded", function() {
-      if (window.createSovereignTutorial) {
-        window.createSovereignTutorial({
-          toolId: "agent-egress-sentinel",
-          toolName: "Agent Egress Sentinel",
-          tagline: "Track and block secret internet calls from sneaky AI tools!",
-          accentColor: "#F59E0B",
-          steps: [
-            {
-              icon: "📡",
-              title: "What is Egress Traffic?",
-              desc: "Egress is data leaving your computer to the internet. Many AI libraries secretly phone home with telemetry, logs, or your prompt secrets without telling you!"
-            },
-            {
-              icon: "🛑",
-              title: "The Egress Firewall Radar",
-              desc: "This radar catches every outbound HTTP/WebSocket connection in real time and can block unauthorized domains instantly."
-            },
-            {
-              icon: "🛡️",
-              title: "Zero-Egress Mode",
-              desc: "Flip the switch to Zero-Egress to ensure 100% of your AI workloads stay strictly on your local PC loopback (127.0.0.1)."
-            }
-          ]
-        });
-      }
-    });
-  </script>
-
 </body>
 </html>
